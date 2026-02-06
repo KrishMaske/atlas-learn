@@ -151,6 +151,7 @@ export default function Canvas({
                 selectNode(node.id);
               }
             }}
+            onDoubleClick={() => handleNodeDoubleClick(node.id)}
             onDragStart={(e) => handleNodeDragStart(node.id, e)}
             utilization={metrics?.utilization || 0}
           />

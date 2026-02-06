@@ -19,6 +19,7 @@ interface NodeRendererProps {
   node: NodeData;
   isSelected: boolean;
   onSelect: () => void;
+  onDoubleClick: () => void;
   onDragStart: (e: React.MouseEvent) => void;
   utilization?: number; // 0-1 for visual feedback during simulation
 }
@@ -27,6 +28,7 @@ export default function NodeRenderer({
   node,
   isSelected,
   onSelect,
+  onDoubleClick,
   onDragStart,
   utilization = 0,
 }: NodeRendererProps) {
@@ -56,6 +58,10 @@ export default function NodeRenderer({
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onDoubleClick();
       }}
       onMouseDown={onDragStart}
     >
