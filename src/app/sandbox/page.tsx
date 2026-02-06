@@ -10,11 +10,15 @@ import Canvas from '@/components/canvas/Canvas';
 import InspectorPanel from '@/components/inspector/InspectorPanel';
 import RunControls from '@/components/sim/RunControls';
 import MetricsPanel from '@/components/sim/MetricsPanel';
+import CodePreview from '@/components/generator/CodePreview';
+import ExportDialog from '@/components/generator/ExportDialog';
 import Link from 'next/link';
 
 // =============================================================================
-// Sandbox Page
+// Sandbox Page — visual builder + simulation + code generation
 // =============================================================================
+
+type RightPanel = 'inspector' | 'code';
 
 export default function SandboxPage() {
   const [draggedNodeType, setDraggedNodeType] = useState<NodeType | null>(null);
@@ -23,6 +27,8 @@ export default function SandboxPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [tick, setTick] = useState(0);
   const [simulationMetrics, setSimulationMetrics] = useState<Map<string, { utilization: number; requestCount: number }>>(new Map());
+  const [rightPanel, setRightPanel] = useState<RightPanel>('inspector');
+  const [exportOpen, setExportOpen] = useState(false);
 
   const engineRef = useRef<SimulationEngine | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,7 +40,6 @@ export default function SandboxPage() {
     setTick(snapshot.tick);
     setMetrics(snapshot.metrics);
 
-    // Convert node metrics for canvas visualization
     const nodeViz = new Map<string, { utilization: number; requestCount: number }>();
     for (const [nodeId, m] of snapshot.nodeMetrics) {
       nodeViz.set(nodeId, {
@@ -113,11 +118,11 @@ export default function SandboxPage() {
       {/* Top Bar */}
       <header className="h-14 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-lg font-bold text-white">
-            Atlas Learn
+          <Link href="/" className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Atlas
           </Link>
-          <span className="text-slate-500">|</span>
-          <span className="text-slate-400">Sandbox</span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400 text-sm">Sandbox</span>
         </div>
 
         <RunControls
@@ -129,12 +134,46 @@ export default function SandboxPage() {
           onReset={handleReset}
         />
 
-        <Link
-          href="/tutorial"
-          className="px-4 py-2 bg-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors text-sm"
-        >
-          📚 Tutorials
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Panel toggle */}
+          <div className="flex bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+            <button
+              onClick={() => setRightPanel('inspector')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                rightPanel === 'inspector'
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Inspector
+            </button>
+            <button
+              onClick={() => setRightPanel('code')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                rightPanel === 'code'
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Code
+            </button>
+          </div>
+
+          {/* Export */}
+          <button
+            onClick={() => setExportOpen(true)}
+            className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity text-xs font-medium"
+          >
+            Export
+          </button>
+
+          <Link
+            href="/tutorial"
+            className="px-3 py-1.5 bg-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors text-xs"
+          >
+            Tutorials
+          </Link>
+        </div>
       </header>
 
       {/* Main Content */}
@@ -149,12 +188,21 @@ export default function SandboxPage() {
           isSimulating={isSimulating && !isPaused}
         />
 
-        {/* Right: Inspector */}
-        <InspectorPanel />
+        {/* Right: Inspector or Code Preview */}
+        {rightPanel === 'inspector' ? (
+          <InspectorPanel />
+        ) : (
+          <div className="w-[480px] border-l border-slate-700/50">
+            <CodePreview />
+          </div>
+        )}
       </div>
 
       {/* Bottom: Metrics */}
       <MetricsPanel metrics={metrics} tick={tick} />
+
+      {/* Export Dialog */}
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
     </div>
   );
 }

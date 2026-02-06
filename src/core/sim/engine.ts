@@ -129,7 +129,7 @@ export class SimulationEngine {
       if (this.onUpdate) {
         this.onUpdate(snapshot);
       }
-    }, tickInterval);
+    }, tickIntervalMs);
   }
 
   pause() {
@@ -186,6 +186,3 @@ export class SimulationEngine {
     return this.isRunning;
   }
 }
-
-// Fix variable name typo
-const tickInterval = 100;

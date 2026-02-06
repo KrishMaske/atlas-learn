@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 // =============================================================================
-// Atlas Learn - Landing Page
+// Atlas — Landing Page
 // =============================================================================
 
 export default function Home() {
@@ -30,23 +30,24 @@ export default function Home() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-full border border-slate-700 mb-8">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-slate-300">Interactive System Design Lab</span>
+            <span className="text-sm text-slate-300">Visual Backend Architecture Platform</span>
           </div>
 
           {/* Title */}
           <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
-            Atlas Learn
+            Atlas
           </h1>
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-slate-400 mb-8 max-w-2xl mx-auto">
-            Build system architectures. Watch them break. Learn why.
+            Design backend architectures. Simulate them. Generate real code.
           </p>
 
           {/* Description */}
           <p className="text-slate-500 mb-12 max-w-xl mx-auto">
-            A visual playground for learning distributed systems. Drag-and-drop nodes, 
-            run simulations, and see how latency spikes, queues build up, and caches save the day.
+            Drag-and-drop nodes to build production backend architectures — load balancers,
+            APIs, databases, queues, workers, and more. Run simulations to find bottlenecks,
+            then export real TypeScript/Express code ready to deploy.
           </p>
 
           {/* CTA Buttons */}
@@ -78,7 +79,7 @@ export default function Home() {
       <section className="relative py-24 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-            Learn by Breaking Things
+            Build. Simulate. Generate.
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -87,10 +88,10 @@ export default function Home() {
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-2xl mb-4">
                 🔀
               </div>
-              <h3 className="text-xl font-semibold mb-2">Visual Graph Editor</h3>
+              <h3 className="text-xl font-semibold mb-2">Visual Node Builder</h3>
               <p className="text-slate-400">
-                Drag and drop nodes to build architectures. Connect services, databases, 
-                caches, and queues.
+                20+ node types across 8 categories. Load balancers, APIs, databases, caches,
+                queues, stream processors and more — connected with drag-and-drop.
               </p>
             </div>
 
@@ -99,22 +100,22 @@ export default function Home() {
               <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-2xl mb-4">
                 ⚡
               </div>
-              <h3 className="text-xl font-semibold mb-2">Live Simulation</h3>
+              <h3 className="text-xl font-semibold mb-2">Runtime Simulation</h3>
               <p className="text-slate-400">
-                Run traffic through your system. Watch requests flow, queues build, 
-                and see real-time metrics.
+                Run traffic through your architecture. Watch utilization, latency, and
+                throughput in real-time. Find bottlenecks before you write code.
               </p>
             </div>
 
             {/* Feature 3 */}
             <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-green-500/50 transition-colors">
               <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center text-2xl mb-4">
-                📚
+                📦
               </div>
-              <h3 className="text-xl font-semibold mb-2">Guided Tutorials</h3>
+              <h3 className="text-xl font-semibold mb-2">Code Generation</h3>
               <p className="text-slate-400">
-                Structured levels that teach bottlenecks, caching, async processing, 
-                and more.
+                Export real TypeScript + Express backend code. Includes services,
+                Docker Compose, package.json, and a README — ready to deploy.
               </p>
             </div>
           </div>
@@ -125,10 +126,10 @@ export default function Home() {
       <footer className="border-t border-slate-800 py-8 px-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <p className="text-slate-500 text-sm">
-            Built for HackUMass 2024
+            Atlas — Visual Backend Architecture Platform
           </p>
           <p className="text-slate-500 text-sm">
-            Atlas Learn
+            Design → Simulate → Generate → Deploy
           </p>
         </div>
       </footer>

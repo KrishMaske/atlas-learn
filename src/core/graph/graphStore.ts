@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { NodeData, EdgeData, GraphState, NodeType, DEFAULT_CONFIGS, NODE_LABELS } from '@/core/types';
+import { NodeData, EdgeData, GraphState, NodeType, DEFAULT_CONFIGS, NODE_LABELS, AnyNodeConfig } from '@/core/types';
 
 // -----------------------------------------------------------------------------
 // Utility: Generate unique IDs
@@ -84,7 +84,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   updateNodeConfig: (id, config) => {
     set((state) => ({
       nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, config: { ...n.config, ...config } } : n
+        n.id === id ? { ...n, config: { ...n.config, ...config } as AnyNodeConfig } : n
       ),
     }));
   },
