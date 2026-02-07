@@ -52,6 +52,7 @@ export interface NodeState {
   utilization: number;
   throughput: number;
   errorCount: number;
+  roundRobinIdx?: number;
 }
 
 // -----------------------------------------------------------------------------
@@ -66,6 +67,7 @@ export function createInitialNodeState(): NodeState {
     utilization: 0,
     throughput: 0,
     errorCount: 0,
+    roundRobinIdx: 0,
   };
 }
 

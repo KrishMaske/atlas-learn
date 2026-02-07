@@ -5,6 +5,14 @@ import { runningServers } from '../start/route';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+  
+  // Security Gate
+  const ATLAS_SECRET = process.env.ATLAS_SECRET || 'atlas-local-dev-secret';
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== ATLAS_SECRET) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   const pid = searchParams.get('pid');
   const filePath = searchParams.get('path'); // relative path
 

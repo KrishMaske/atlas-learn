@@ -164,8 +164,18 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       selectedEdgeId: null,
     });
     // Update counters to avoid ID collisions
-    nodeCounter = graph.nodes.length;
-    edgeCounter = graph.edges.length;
+    const maxNodeId = graph.nodes.reduce((max, node) => {
+        const match = node.id.match(/^node_(\d+)$/);
+        return match ? Math.max(max, parseInt(match[1], 10)) : max;
+    }, 0);
+    
+    const maxEdgeId = graph.edges.reduce((max, edge) => {
+        const match = edge.id.match(/^edge_(\d+)$/);
+        return match ? Math.max(max, parseInt(match[1], 10)) : max;
+    }, 0);
+
+    nodeCounter = maxNodeId;
+    edgeCounter = maxEdgeId;
   },
 
   getNode: (id) => {

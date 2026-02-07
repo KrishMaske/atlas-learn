@@ -91,19 +91,30 @@ export class SimulationEngine {
 
       if (outgoing.length > 0) {
         if (edges.length > 0) {
-          // Broadcast to ALL connected nodes
+          
+          // Generalized Routing: Default to Round Robin for ALL multi-edge nodes
+          // unless specific logic dictates otherwise (e.g., specific broadcast types).
+          // For now, we apply Single-Target Round Robin to everything to avoid "duplication".
+
+          let rrIndex = newState.roundRobinIdx || 0;
+          
           for (const req of outgoing) {
-            for (const edge of edges) {
-              const targetId = edge.targetId;
-              const targetIncoming = nodeIncoming.get(targetId) || [];
-              
-              // Clone request for each path to track independent lifecycles if needed
-              // For simple simulation, we can just push the same object or a shallow copy
-              // Here we push a shallow copy to allow independent latency tracking downstream
-              targetIncoming.push({ ...req }); 
-              nodeIncoming.set(targetId, targetIncoming);
-            }
+             // Pick ONE edge based on index
+             const edge = edges[rrIndex % edges.length];
+             const targetId = edge.targetId;
+             const targetIncoming = nodeIncoming.get(targetId) || [];
+             
+             // Move the request (no cloning needed for single path, but keeping object distinctive is good)
+             targetIncoming.push({ ...req }); 
+             nodeIncoming.set(targetId, targetIncoming);
+             
+             rrIndex++;
           }
+          
+          // Update state with new RR index
+          newState.roundRobinIdx = rrIndex;
+          this.nodeStates.set(node.id, newState);
+
         } else {
           // No outgoing edge = request completed
           for (const req of outgoing) {

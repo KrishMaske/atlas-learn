@@ -11,6 +11,12 @@ export async function POST(
     const body = await req.json();
     const { payload, graph } = body;
 
+    const ATLAS_SECRET = process.env.ATLAS_SECRET || 'atlas-local-dev-secret';
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== ATLAS_SECRET) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!graph || !nodeId) {
       return NextResponse.json(
         { error: 'Missing graph or nodeId' },

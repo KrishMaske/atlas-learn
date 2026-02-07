@@ -41,25 +41,11 @@ export class ExecutionEngine {
       let output = input;
 
       if (node.config.customCode) {
-        // Safe-ish eval for custom code
-        // Function signature: (input, context) => Promise<any>
-        try {
-            const userFn = new Function('input', 'console', `
-                return (async () => {
-                    ${node.config.customCode}
-                })();
-            `);
-            
-            // Mock console to capture logs
-            const mockConsole = {
-                log: (...args: any[]) => this.log(`[USER] ${args.join(' ')}`),
-                error: (...args: any[]) => this.log(`[USER ERR] ${args.join(' ')}`),
-            };
-
-            output = await userFn(input, mockConsole);
-        } catch (err: any) {
-             throw new Error(`Custom code execution failed: ${err.message}`);
-        }
+        // SECURITY: Disable arbitrary code execution using new Function
+        // In a real environment, this should be run in a sandboxed isolation (e.g., vm2, isolated-vm)
+        // or disabled entirely. For this local tool, we disable it to be safe per user request.
+        this.log(`[WARN] Custom code execution is disabled for node ${node.label}`);
+        output = { ...input, _warning: 'Custom code execution is disabled for security' };
       } else {
           // Default behaviors if no custom code
           switch (node.type) {

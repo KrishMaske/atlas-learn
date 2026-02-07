@@ -52,13 +52,16 @@ export default function GraphCodeView({ serverState, isStarting, onStartServer, 
     if (serverState.running && serverState.pid) {
       const fetchFiles = async () => {
         try {
-          const res = await fetch(`/api/v1/server/files?pid=${serverState.pid}`);
+          const res = await fetch(`/api/v1/server/files?pid=${serverState.pid}`, {
+            headers: { 'Authorization': 'Bearer atlas-local-dev-secret' }
+          });
           const data = await res.json();
           if (data.success) {
             setFiles(data.files);
           }
         } catch (err) {
-          console.error('Failed to fetch files:', err);
+          // Ignore fetch errors during development/reloads to avoid noise
+          console.warn('Failed to fetch files (server might be restarting):', err);
         }
       };
       

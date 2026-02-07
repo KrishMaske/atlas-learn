@@ -9,7 +9,9 @@ import {
     Settings,
     Zap,
     Layout,
-    BookOpen
+    BookOpen,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,10 +20,11 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
     const { theme } = useTheme();
+    const [isCollapsed, setIsCollapsed] = React.useState(false);
 
     return (
         <div className="flex h-screen w-full overflow-hidden transition-all duration-700">
-            <Sidebar theme={theme} />
+            <Sidebar theme={theme} isCollapsed={isCollapsed}  toggleSidebar={() => setIsCollapsed(!isCollapsed)} />
             <div className="flex-1 flex flex-col relative z-20">
                 <Header theme={theme} />
                 <main className="flex-1 overflow-hidden relative">
@@ -44,7 +47,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     );
 }
 
-function Sidebar({ theme }: { theme: string | undefined }) {
+function Sidebar({ theme, isCollapsed, toggleSidebar }: { theme: string | undefined, isCollapsed: boolean, toggleSidebar: () => void }) {
     const pathname = usePathname();
 
     const links = [
@@ -57,19 +60,32 @@ function Sidebar({ theme }: { theme: string | undefined }) {
 
     return (
         <motion.aside
-            initial={{ x: -100 }}
-            animate={{ x: 0 }}
-            className="w-16 lg:w-64 h-full border-r flex flex-col pt-4 z-30 transition-all duration-500
-            bg-card/80 backdrop-blur-md border-border shadow-2xl"
+            initial={false}
+            animate={{ width: isCollapsed ? 80 : 256 }}
+            className="h-full border-r flex flex-col pt-4 z-30 transition-all duration-500
+            bg-card/80 backdrop-blur-md border-border shadow-2xl relative"
         >
+            {/* Toggle Button */}
+            <button 
+                onClick={toggleSidebar}
+                className="absolute -right-3 top-8 bg-background border border-border rounded-full p-1 shadow-md hover:bg-accent transition-colors z-50 text-foreground"
+            >
+                {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
 
-            <div className="flex items-center justify-center lg:justify-start lg:px-6 mb-8">
-                <div className="p-2 rounded-xl mr-0 lg:mr-3 transition-all bg-primary/20">
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-6'} mb-8 transition-all`}>
+                <div className="p-2 rounded-xl transition-all bg-primary/20 shrink-0">
                     <Zap className="w-6 h-6 text-primary" />
                 </div>
-                <span className="hidden lg:block font-bold text-xl tracking-tight transition-colors text-foreground font-sans uppercase">
-                    ATLAS
-                </span>
+                {!isCollapsed && (
+                    <motion.span 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="ml-3 font-bold text-xl tracking-normal transition-colors text-primary font-sans uppercase pr-1 truncate"
+                    >
+                        ATLAS
+                    </motion.span>
+                )}
             </div>
 
             <nav className="flex-1 px-3 space-y-2">
@@ -83,14 +99,22 @@ function Sidebar({ theme }: { theme: string | undefined }) {
                                     ? 'bg-primary/20 text-primary border border-primary/20'
                                     : 'hover:bg-muted text-muted-foreground hover:text-foreground'
                                 }
+                            ${isCollapsed ? 'justify-center' : ''}
                         `}>
                                 <link.icon size={20} className={`
+                                shrink-0
                                 ${isActive ? 'animate-pulse text-primary' : ''}
                                 ${!isActive ? 'group-hover:text-foreground' : ''}
                             `} />
-                                <span className="hidden lg:block ml-3 font-medium text-sm">
-                                    {link.label}
-                                </span>
+                                {!isCollapsed && (
+                                    <motion.span 
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="ml-3 font-medium text-sm truncate"
+                                    >
+                                        {link.label}
+                                    </motion.span>
+                                )}
                             </div>
                         </Link>
                     )
@@ -98,15 +122,17 @@ function Sidebar({ theme }: { theme: string | undefined }) {
             </nav>
 
             <div className="p-4 border-t border-black/5 dark:border-white/5">
-                <div className="p-4 rounded-xl backdrop-blur-md border border-white/10 bg-gradient-to-br from-primary to-purple-600 text-primary-foreground">
+                <div className={`p-4 rounded-xl backdrop-blur-md border border-white/10 bg-gradient-to-br from-primary to-purple-600 text-primary-foreground ${isCollapsed ? 'flex justify-center p-2' : ''}`}>
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white/90">
+                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white/90 shrink-0">
                             <CreditCard size={14} />
                         </div>
-                        <div className="hidden lg:block">
-                            <p className="text-xs font-medium">Pro Plan</p>
-                            <p className="text-[10px] opacity-70">v1.2.0-beta</p>
-                        </div>
+                        {!isCollapsed && (
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">Pro Plan</p>
+                                <p className="text-[10px] opacity-70 truncate">v1.2.0-beta • Live</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -131,7 +157,7 @@ function Header({ theme }: { theme: string | undefined }) {
             </div>
 
             {/* Note: ThemeToggle is positioned absolutely in layout, so we leave space here or wrap it */}
-            <ThemeToggle />
+
             <div className="w-4" />
         </motion.header>
     )

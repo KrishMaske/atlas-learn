@@ -16,7 +16,7 @@ export function ThemeToggle() {
     if (!mounted) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 p-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-lg">
+        <div className="flex items-center gap-2 p-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-lg">
             <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}

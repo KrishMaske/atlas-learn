@@ -5,8 +5,17 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { GraphState, NodeData, EdgeData } from '@/core/types';
 
-// Store running server processes
-export const runningServers: Map<number, { process: ChildProcess; port: number; workDir: string }> = new Map();
+const ATLAS_SECRET = process.env.ATLAS_SECRET || 'atlas-local-dev-secret';
+
+
+// Persist running servers across HMR (Hot Module Replacement)
+const globalForServers = global as unknown as { atlasRunningServers: Map<number, { process: ChildProcess; port: number; workDir: string }> };
+
+export const runningServers = globalForServers.atlasRunningServers || new Map<number, { process: ChildProcess; port: number; workDir: string }>();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForServers.atlasRunningServers = runningServers;
+}
 
 // Find an available port
 function getAvailablePort(): number {
@@ -170,6 +179,12 @@ function getDefaultCode(node: NodeData, edges: EdgeData[], allNodes: NodeData[])
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Strict Security Gate
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== ATLAS_SECRET) {
+        return NextResponse.json({ success: false, error: 'Unauthorized: Missing or invalid Bearer token' }, { status: 401 });
+    }
+
     const { graph } = await req.json();
     
     if (!graph) {

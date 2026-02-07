@@ -7,6 +7,13 @@ import { rmSync, existsSync } from 'fs';
 
 export async function POST(req: NextRequest) {
   try {
+    // Security Gate
+    const ATLAS_SECRET = process.env.ATLAS_SECRET || 'atlas-local-dev-secret';
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== ATLAS_SECRET) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { pid } = await req.json();
     
     if (!pid) {

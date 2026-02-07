@@ -62,7 +62,10 @@ export default function SandboxPage() {
       const graph = { nodes: useGraphStore.getState().nodes, edges: useGraphStore.getState().edges, selectedNodeId: null, selectedEdgeId: null };
       const res = await fetch('/api/v1/server/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer atlas-local-dev-secret' // In real app, this comes from env/session
+        },
         body: JSON.stringify({ graph }),
       });
       const result = await res.json();
@@ -97,7 +100,10 @@ export default function SandboxPage() {
     try {
       await fetch('/api/v1/server/stop', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer atlas-local-dev-secret'
+        },
         body: JSON.stringify({ pid: serverState.pid }),
       });
       
