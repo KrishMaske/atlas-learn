@@ -108,33 +108,119 @@ export default function TestRunnerModal({ onClose }: { onClose: () => void }) {
         <div className="p-4 border-t border-slate-800 flex justify-between">
             <button
                 onClick={() => {
-                  // Generate a test flow: Client → API Gateway → REST API → Database
-                  const addNode = useGraphStore.getState().addNode;
-                  const addEdge = useGraphStore.getState().addEdge;
-                  const clearGraph = useGraphStore.getState().clearGraph;
+                  const state = useGraphStore.getState();
+                  const { addNode, addEdge, clearGraph, updateNodeLabel, updateNodeConfig } = state;
                   
-                  // Clear existing graph
                   clearGraph();
                   
-                  // Add nodes at specific positions
-                  const clientId = addNode('CLIENT' as NodeType, { x: 100, y: 200 });
-                  const gatewayId = addNode('API_GATEWAY' as NodeType, { x: 300, y: 200 });
-                  const restApiId = addNode('REST_API' as NodeType, { x: 500, y: 150 });
-                  const authId = addNode('AUTH_SERVICE' as NodeType, { x: 500, y: 280 });
-                  const dbId = addNode('SQL_DATABASE' as NodeType, { x: 700, y: 200 });
+                  // 1. Client
+                  const clientId = addNode('CLIENT' as NodeType, { x: 100, y: 300 });
+                  updateNodeLabel(clientId, 'Web App');
+
+                  // 2. Gateway
+                  const gatewayId = addNode('API_GATEWAY' as NodeType, { x: 350, y: 300 });
+                  updateNodeLabel(gatewayId, 'Gateway');
+
+                  // 3. Auth Service
+                  const authCode = `
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+
+// Simple fetch wrapper to call DB
+// In a real scenario, use service discovery or env vars
+const dbUrl = 'http://localhost:' + (process.env.PORT || 4000) + '/db/users-db';
+
+if (req.method === 'POST' && req.path === '/signup') {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+  
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // Call DB
+  try {
+    const dbRes = await fetch(dbUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', username, password: hashedPassword })
+    });
+    const result = await dbRes.json();
+    res.json({ message: 'User created', result });
+  } catch (err) {
+    res.status(500).json({ error: 'DB Connection failed' });
+  }
+
+} else if (req.method === 'POST' && req.path === '/login') {
+  const { username, password } = req.body;
+  
+  // Call DB
+  try {
+    const dbRes = await fetch(dbUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'find', username })
+    });
+    const user = await dbRes.json();
+    
+    if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    const match = await bcrypt.compare(password, user.password);
+    if (match) {
+      const token = jwt.sign({ username }, 'secret');
+      res.json({ token });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
+    }
+  } catch (err) {
+     res.status(500).json({ error: 'DB Connection failed' });
+  }
+} else {
+  res.status(404).json({ error: 'Route not found' });
+}
+`;
+                  const authId = addNode('AUTH_SERVICE' as NodeType, { x: 600, y: 200 });
+                  updateNodeLabel(authId, 'Auth Service');
+                  updateNodeConfig(authId, { customCode: authCode });
+
+                  // 4. Database
+                  const dbCode = `
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('users.db');
+
+// Initialize Table
+db.run("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)");
+
+if (req.method === 'POST') {
+  const { action, username, password } = req.body;
+  
+  if (action === 'create') {
+    db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID });
+    });
+  } else if (action === 'find') {
+    db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(row || null);
+    });
+  } else {
+    res.json({ status: 'ready', table: 'users' });
+  }
+}
+`;
+                  const dbId = addNode('SQL_DATABASE' as NodeType, { x: 850, y: 300 });
+                  updateNodeLabel(dbId, 'Users DB');
+                  updateNodeConfig(dbId, { customCode: dbCode });
                   
                   // Connect them
                   addEdge(clientId, gatewayId);
-                  addEdge(gatewayId, restApiId);
                   addEdge(gatewayId, authId);
-                  addEdge(restApiId, dbId);
                   addEdge(authId, dbId);
                   
                   onClose();
                 }}
-                className="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all"
+                className="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all flex items-center gap-2"
             >
-                🧪 Generate Test Flow
+                ⚡ Generate Auth Flow
             </button>
             <button
                 onClick={handleRunAll}

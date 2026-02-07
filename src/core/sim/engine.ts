@@ -87,19 +87,30 @@ export class SimulationEngine {
       this.nodeStates.set(node.id, newState);
 
       // Route outgoing requests to connected nodes
-      const edges = this.getOutgoingEdges(node.id);
-      for (const req of outgoing) {
+      const edges = this.getOutgoingEdges(node.id); // Get all outgoing edges
+
+      if (outgoing.length > 0) {
         if (edges.length > 0) {
-          // Send to first connected node (simple routing)
-          const targetId = edges[0].targetId;
-          const targetIncoming = nodeIncoming.get(targetId) || [];
-          targetIncoming.push(req);
-          nodeIncoming.set(targetId, targetIncoming);
+          // Broadcast to ALL connected nodes
+          for (const req of outgoing) {
+            for (const edge of edges) {
+              const targetId = edge.targetId;
+              const targetIncoming = nodeIncoming.get(targetId) || [];
+              
+              // Clone request for each path to track independent lifecycles if needed
+              // For simple simulation, we can just push the same object or a shallow copy
+              // Here we push a shallow copy to allow independent latency tracking downstream
+              targetIncoming.push({ ...req }); 
+              nodeIncoming.set(targetId, targetIncoming);
+            }
+          }
         } else {
           // No outgoing edge = request completed
-          req.status = 'SUCCESS';
-          this.allCompletedRequests.push(req);
-          this.rollingMetrics.addRequest(req);
+          for (const req of outgoing) {
+            req.status = 'SUCCESS';
+            this.allCompletedRequests.push(req);
+            this.rollingMetrics.addRequest(req);
+          }
         }
       }
 

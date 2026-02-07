@@ -6,7 +6,7 @@ import { tmpdir } from 'os';
 import { GraphState, NodeData, EdgeData } from '@/core/types';
 
 // Store running server processes
-const runningServers: Map<number, { process: ChildProcess; port: number }> = new Map();
+export const runningServers: Map<number, { process: ChildProcess; port: number; workDir: string }> = new Map();
 
 // Find an available port
 function getAvailablePort(): number {
@@ -38,16 +38,16 @@ app.listen(${port}, () => console.log('[Atlas] Server on http://localhost:${port
   
   lines.push(`const express = require('express');`);
   lines.push(`const cors = require('cors');`);
+  lines.push(`const swaggerUi = require('swagger-ui-express');`);
   lines.push(`const app = express();`);
+  lines.push(`process.env.PORT = '${port}'; // Inject port for internal use`);
   lines.push(`app.use(cors());`);
   lines.push(`app.use(express.json());`);
   lines.push(``);
-  lines.push(`// Health check`);
-  lines.push(`app.get('/health', (req, res) => {`);
-  lines.push(`  res.json({ status: 'ok', nodes: ${nodes.length}, timestamp: Date.now() });`);
-  lines.push(`});`);
-  lines.push(``);
 
+  // OpenAPI Spec Builder
+  const paths: any = {};
+  
   // Generate routes for each node
   for (const node of nodes) {
     const slug = node.label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -60,6 +60,29 @@ app.listen(${port}, () => console.log('[Atlas] Server on http://localhost:${port
        const config = node.config as any;
        if (config.method) method = config.method.toLowerCase();
     }
+
+    // Add to Swagger paths
+    if (!paths[routePath]) paths[routePath] = {};
+    paths[routePath][method] = {
+      summary: node.label,
+      description: node.config.jobSpec || `Handler for ${node.label}`,
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              example: { username: 'user', password: '123' } // Generic example
+            }
+          }
+        }
+      },
+      responses: {
+        '200': { description: 'Successful response' },
+        '400': { description: 'Bad Request' },
+        '401': { description: 'Unauthorized' },
+        '500': { description: 'Server error' }
+      }
+    };
     
     // If it's a GET request, we shouldn't try to read req.body for input usually, 
     // but Express handles it fine. For browser testing, GET is essential.
@@ -84,8 +107,30 @@ app.listen(${port}, () => console.log('[Atlas] Server on http://localhost:${port
     lines.push(``);
   }
 
+  // Swagger Setup
+  const swaggerDocument = {
+    openapi: '3.0.0',
+    info: {
+      title: 'Atlas Live Server API',
+      version: '1.0.0',
+      description: 'Auto-generated API documentation for your Atlas graph.'
+    },
+    paths: paths
+  };
+
+  lines.push(`// Swagger UI`);
+  lines.push(`const swaggerDocument = ${JSON.stringify(swaggerDocument, null, 2)};`);
+  lines.push(`app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));`);
+  lines.push(``);
+
+  lines.push(`// Health check`);
+  lines.push(`app.get('/health', (req, res) => {`);
+  lines.push(`  res.json({ status: 'ok', nodes: ${nodes.length}, timestamp: Date.now() });`);
+  lines.push(`});`);
+
   lines.push(`app.listen(${port}, () => {`);
   lines.push(`  console.log('[Atlas] Server running on http://localhost:${port}');`);
+  lines.push(`  console.log('[Atlas] Swagger UI: http://localhost:${port}/api-docs');`);
   lines.push(`  console.log('[Atlas] Health check: http://localhost:${port}/health');`);
   lines.push(`});`);
 
@@ -93,6 +138,12 @@ app.listen(${port}, () => console.log('[Atlas] Server on http://localhost:${port
 }
 
 function getRoutePath(node: NodeData): string {
+  // If the node has a specific path configured (e.g. REST_API), use it
+  if (['REST_API', 'API', 'API_GATEWAY', 'GRAPHQL_API'].includes(node.type)) {
+    const config = node.config as any;
+    if (config.path) return config.path;
+  }
+
   const slug = node.label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   switch (node.type) {
     case 'CLIENT': return `/client/${slug}`;
@@ -142,6 +193,10 @@ export async function POST(req: NextRequest) {
       dependencies: {
         express: '^4.18.2',
         cors: '^2.8.5',
+        'swagger-ui-express': '^5.0.0',
+        'jsonwebtoken': '^9.0.0',
+        'bcrypt': '^5.1.0',
+        'sqlite3': '^5.1.6',
       },
     };
     writeFileSync(join(serverDir, 'package.json'), JSON.stringify(packageJson, null, 2));
@@ -149,7 +204,9 @@ export async function POST(req: NextRequest) {
     // Install dependencies
     console.log('[Atlas] Installing dependencies in', serverDir);
     try {
-      execSync('npm install --silent', { cwd: serverDir, stdio: 'pipe' });
+      // Use --no-audit --no-fund for speed 
+      // Remove --silent to see errors in server logs if it fails
+      execSync('npm install --no-audit --no-fund', { cwd: serverDir, stdio: 'inherit' });
     } catch (installErr: any) {
       console.error('[Atlas] npm install failed:', installErr.message);
       return NextResponse.json({ 
@@ -168,7 +225,7 @@ export async function POST(req: NextRequest) {
     });
 
     const pid = serverProcess.pid || Date.now();
-    runningServers.set(pid, { process: serverProcess, port });
+    runningServers.set(pid, { process: serverProcess, port, workDir: serverDir });
 
     let stdout = '';
     let stderr = '';
@@ -218,4 +275,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export { runningServers };
+

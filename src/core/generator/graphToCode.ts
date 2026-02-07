@@ -86,6 +86,12 @@ function generateNodeBlock(node: NodeData, edges: EdgeData[], allNodes: NodeData
 }
 
 function getRoutePath(node: NodeData): string {
+  // If the node has a specific path configured, use it
+  if (['REST_API', 'API', 'API_GATEWAY', 'GRAPHQL_API'].includes(node.type)) {
+    const config = node.config as any;
+    if (config.path) return config.path;
+  }
+
   // Generate a route path based on node type and label
   const slug = node.label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   
@@ -121,9 +127,9 @@ function getRoutePath(node: NodeData): string {
 
 function getHttpMethod(node: NodeData): string {
   // Most nodes use POST for data processing, APIs use their configured method
-  if (node.type === 'REST_API' || node.type === 'API') {
+  if (['REST_API', 'API', 'API_GATEWAY'].includes(node.type)) {
     const config = node.config as any;
-    return (config.method || 'get').toLowerCase();
+    return (config.method || 'post').toLowerCase();
   }
   return 'post';
 }

@@ -40,6 +40,81 @@ export default function SandboxPage() {
 
   const { nodes, edges } = useGraphStore();
 
+  // Server state lifted from GraphCodeView
+  const [serverState, setServerState] = useState<{
+    running: boolean;
+    port: number | null;
+    pid: number | null;
+    logs: string[];
+  }>({
+    running: false,
+    port: null,
+    pid: null,
+    logs: [],
+  });
+  const [isStartingServer, setIsStartingServer] = useState(false);
+
+  // Start the live server
+  const handleStartServer = useCallback(async () => {
+    setIsStartingServer(true);
+    try {
+      // Use current graph state
+      const graph = { nodes: useGraphStore.getState().nodes, edges: useGraphStore.getState().edges, selectedNodeId: null, selectedEdgeId: null };
+      const res = await fetch('/api/v1/server/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ graph }),
+      });
+      const result = await res.json();
+      
+      if (result.success) {
+        setServerState({
+          running: true,
+          port: result.port,
+          pid: result.pid,
+          logs: [`Server started on port ${result.port}`],
+        });
+      } else {
+        setServerState(prev => ({
+          ...prev,
+          logs: [...prev.logs, `Error: ${result.error}`],
+        }));
+      }
+    } catch (err: any) {
+      setServerState(prev => ({
+        ...prev,
+        logs: [...prev.logs, `Error: ${err.message}`],
+      }));
+    } finally {
+      setIsStartingServer(false);
+    }
+  }, []);
+
+  // Stop the live server
+  const handleStopServer = useCallback(async () => {
+    if (!serverState.pid) return;
+    
+    try {
+      await fetch('/api/v1/server/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid: serverState.pid }),
+      });
+      
+      setServerState({
+        running: false,
+        port: null,
+        pid: null,
+        logs: [...serverState.logs, 'Server stopped'],
+      });
+    } catch (err: any) {
+      setServerState(prev => ({
+        ...prev,
+        logs: [...prev.logs, `Error stopping: ${err.message}`],
+      }));
+    }
+  }, [serverState.pid, serverState.logs]);
+
   // Handle simulation updates
   const handleSimulationUpdate = useCallback((snapshot: SimulationSnapshot) => {
     setTick(snapshot.tick);
@@ -66,13 +141,18 @@ export default function SandboxPage() {
     setIsSimulating(true);
     setIsPaused(false);
 
+    // Also start the live server if not already running
+    if (!serverState.running && !isStartingServer) {
+      handleStartServer();
+    }
+
     intervalRef.current = setInterval(() => {
       if (engineRef.current) {
         const snapshot = engineRef.current.step();
         handleSimulationUpdate(snapshot);
       }
     }, 100);
-  }, [nodes, edges, handleSimulationUpdate]);
+  }, [nodes, edges, handleSimulationUpdate, serverState.running, isStartingServer, handleStartServer]);
 
   // Pause simulation
   const handlePause = useCallback(() => {
@@ -204,7 +284,12 @@ export default function SandboxPage() {
             )}
           </div>
         ) : (
-          <GraphCodeView />
+          <GraphCodeView 
+            serverState={serverState}
+            isStarting={isStartingServer}
+            onStartServer={handleStartServer}
+            onStopServer={handleStopServer}
+          />
         )}
 
         {/* Bottom Toolbar (Simulation Controls) - only show in visual mode or both? Let's show in both */}

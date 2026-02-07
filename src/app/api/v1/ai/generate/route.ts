@@ -17,7 +17,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing description' }, { status: 400 });
     }
 
-    const systemPrompt = `You are an expert backend developer. Generate JavaScript/TypeScript code for an Express.js route handler.
+    const systemPrompts: Record<string, string> = {
+      DATABASE: `You are a Database Engineer. Generate code to interact with a database.
+CONTEXT:
+- Node ID: ${nodeId}
+- Node Type: ${nodeType}
+- Node Label: ${nodeLabel}
+
+REQUIREMENTS:
+1. Use 'sqlite3' for database operations.
+2. Create a file named 'database.sqlite' if needed.
+3. If the user asks for a new DB, create tables.
+4. If they ask to query, write the SQL query.
+5. Example: \`const db = new sqlite3.Database('database.sqlite'); db.run(...)\`
+6. Output ONLY the code inside the Express route handler.`,
+
+      SQL_DATABASE: `You are a Database Engineer. Generate code to interact with a SQL database.
+CONTEXT:
+- Node ID: ${nodeId}
+- Node Type: ${nodeType}
+- Node Label: ${nodeLabel}
+
+REQUIREMENTS:
+1. Use 'sqlite3' for database operations.
+2. Create a file named 'database.sqlite' if needed.
+3. Output ONLY the code inside the Express route handler.`,
+
+      AUTH_SERVICE: `You are a Security Engineer. Generate authentication logic.
+CONTEXT:
+- Node ID: ${nodeId}
+- Node Type: ${nodeType}
+- Node Label: ${nodeLabel}
+
+REQUIREMENTS:
+1. Use 'jsonwebtoken' for token generation/verification.
+2. Use 'bcrypt' for password hashing if needed.
+3. Implement login/register/verify logic based on description.
+4. Output ONLY the code inside the Express route handler.`,
+
+      QUEUE: `You are a Backend Engineer. Implement message queue logic.
+CONTEXT:
+- Node ID: ${nodeId}
+- Node Type: ${nodeType}
+- Node Label: ${nodeLabel}
+
+REQUIREMENTS:
+1. Use an in-memory array or simple mock queue.
+2. Implement produce/consume logic.
+3. Output ONLY the code inside the Express route handler.`,
+    };
+
+    const defaultSystemPrompt = `You are an expert backend developer. Generate JavaScript/TypeScript code for an Express.js route handler.
 CONTEXT:
 - Node ID: ${nodeId}
 - Node Type: ${nodeType}
@@ -33,6 +83,8 @@ REQUIREMENTS:
 4. Use async/await if needed.
 5. Add helpful console.log statements for debugging.
 6. OUTPUT ONLY THE CODE, no explanation, no markdown fences. Just raw JavaScript code.`;
+
+    const systemPrompt = systemPrompts[nodeType] || defaultSystemPrompt;
 
     const userPrompt = `Description: "${description}"
 ${currentCode ? `\nCURRENT CODE (improve or replace):\n\`\`\`\n${currentCode}\n\`\`\`` : ''}`;

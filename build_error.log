@@ -1,0 +1,423 @@
+
+> atlas-learn@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./src/app/api/v1/server/start/route.ts:220:27
+Module not found: Can't resolve ('server.js' | <dynamic>)
+  218 |     // Spawn the server
+  219 |     console.log('[Atlas] Starting server on port', port);
+> 220 |     const serverProcess = spawn('node', ['server.js'], {
+      |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 221 |       cwd: serverDir,
+      | ^^^^^^^^^^^^^^^^^^^^^
+> 222 |       env: { ...process.env },
+      | ^^^^^^^^^^^^^^^^^^^^^
+> 223 |       stdio: ['pipe', 'pipe', 'pipe'],
+      | ^^^^^^^^^^^^^^^^^^^^^
+> 224 |       detached: false,
+      | ^^^^^^^^^^^^^^^^^^^^^
+> 225 |     });
+      | ^^^^^^^
+  226 |
+  227 |     const pid = serverProcess.pid || Date.now();
+  228 |     runningServers.set(pid, { process: serverProcess, port, workDir: serverDir });
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+
+> Build error occurred
+Error: Turbopack build failed with 17 errors:
+./src/components/landing/FeatureBento.tsx:3:1
+Module not found: Can't resolve 'framer-motion'
+  1 | "use client";
+  2 |
+> 3 | import { motion } from "framer-motion";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 | import { Move, Play, Terminal, Zap } from "lucide-react";
+  5 | import React, { useState } from "react";
+  6 |
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/landing/FeatureBento.tsx
+    ./src/app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/landing/WorkbenchPreview.tsx:3:1
+Module not found: Can't resolve 'framer-motion'
+  1 | "use client";
+  2 |
+> 3 | import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 | import { Database, Globe, Server, Cpu, Activity } from "lucide-react";
+  5 | import React, { useRef } from "react";
+  6 |
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/landing/WorkbenchPreview.tsx
+    ./src/app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/layout/DashboardShell.tsx:5:1
+Module not found: Can't resolve 'framer-motion'
+  3 | import React from "react";
+  4 | import { useTheme } from "next-themes";
+> 5 | import { motion, AnimatePresence } from "framer-motion";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import {
+  7 |     CreditCard,
+  8 |     Grid,
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/layout/DashboardShell.tsx
+    ./src/app/sandbox/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/CustomCursor.tsx:4:1
+Module not found: Can't resolve 'framer-motion'
+  2 |
+  3 | import React, { useEffect, useState } from "react";
+> 4 | import { motion, useMotionValue, useSpring } from "framer-motion";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { useTheme } from "next-themes";
+  6 |
+  7 | export function CustomCursor() {
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/CustomCursor.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/StrangerThingsOverlay.tsx:5:1
+Module not found: Can't resolve 'framer-motion'
+  3 | import { useTheme } from "next-themes";
+  4 | import { useEffect, useState } from "react";
+> 5 | import { motion } from "framer-motion";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 |
+  7 | export function StrangerThingsOverlay() {
+  8 |     const { theme } = useTheme();
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/StrangerThingsOverlay.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/ThemeToggle.tsx:5:1
+Module not found: Can't resolve 'framer-motion'
+  3 | import { useTheme } from "next-themes";
+  4 | import { useEffect, useState } from "react";
+> 5 | import { motion } from "framer-motion";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Sun, Moon, Skull } from "lucide-react";
+  7 |
+  8 | export function ThemeToggle() {
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/ThemeToggle.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/landing/FeatureBento.tsx:4:1
+Module not found: Can't resolve 'lucide-react'
+  2 |
+  3 | import { motion } from "framer-motion";
+> 4 | import { Move, Play, Terminal, Zap } from "lucide-react";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import React, { useState } from "react";
+  6 |
+  7 | const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/landing/FeatureBento.tsx
+    ./src/app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/landing/Footer.tsx:2:1
+Module not found: Can't resolve 'lucide-react'
+  1 | import Link from 'next/link';
+> 2 | import { Github, Twitter } from 'lucide-react';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 |
+  4 | export default function Footer() {
+  5 |     return (
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/landing/Footer.tsx
+    ./src/app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/landing/Hero.tsx:2:1
+Module not found: Can't resolve 'lucide-react'
+  1 | import Link from 'next/link';
+> 2 | import { ArrowRight, Play } from 'lucide-react';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 |
+  4 | export default function Hero() {
+  5 |     return (
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/landing/Hero.tsx
+    ./src/app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/landing/WorkbenchPreview.tsx:4:1
+Module not found: Can't resolve 'lucide-react'
+  2 |
+  3 | import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+> 4 | import { Database, Globe, Server, Cpu, Activity } from "lucide-react";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import React, { useRef } from "react";
+  6 |
+  7 | export default function WorkbenchPreview() {
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/landing/WorkbenchPreview.tsx
+    ./src/app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/layout/DashboardShell.tsx:6:1
+Module not found: Can't resolve 'lucide-react'
+   4 | import { useTheme } from "next-themes";
+   5 | import { motion, AnimatePresence } from "framer-motion";
+>  6 | import {
+     | ^^^^^^^^
+>  7 |     CreditCard,
+     | ^^^^^^^^^^^^^^^
+>  8 |     Grid,
+     | ^^^^^^^^^^^^^^^
+>  9 |     Settings,
+     | ^^^^^^^^^^^^^^^
+> 10 |     Zap,
+     | ^^^^^^^^^^^^^^^
+> 11 |     Layout,
+     | ^^^^^^^^^^^^^^^
+> 12 |     BookOpen
+     | ^^^^^^^^^^^^^^^
+> 13 | } from "lucide-react";
+     | ^^^^^^^^^^^^^^^^^^^^^^^
+  14 | import Link from 'next/link';
+  15 | import { usePathname } from 'next/navigation';
+  16 | import { StrangerThingsOverlay } from "@/components/ui/StrangerThingsOverlay";
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/layout/DashboardShell.tsx
+    ./src/app/sandbox/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/ThemeToggle.tsx:6:1
+Module not found: Can't resolve 'lucide-react'
+  4 | import { useEffect, useState } from "react";
+  5 | import { motion } from "framer-motion";
+> 6 | import { Sun, Moon, Skull } from "lucide-react";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | export function ThemeToggle() {
+  9 |     const { theme, setTheme } = useTheme();
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/ThemeToggle.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/layout/DashboardShell.tsx:4:1
+Module not found: Can't resolve 'next-themes'
+  2 |
+  3 | import React from "react";
+> 4 | import { useTheme } from "next-themes";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { motion, AnimatePresence } from "framer-motion";
+  6 | import {
+  7 |     CreditCard,
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/layout/DashboardShell.tsx
+    ./src/app/sandbox/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/providers/ThemeProvider.tsx:4:1
+Module not found: Can't resolve 'next-themes'
+  2 |
+  3 | import * as React from "react";
+> 4 | import { ThemeProvider as NextThemesProvider } from "next-themes";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | export function ThemeProvider({
+  7 |   children,
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/providers/ThemeProvider.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/CustomCursor.tsx:5:1
+Module not found: Can't resolve 'next-themes'
+  3 | import React, { useEffect, useState } from "react";
+  4 | import { motion, useMotionValue, useSpring } from "framer-motion";
+> 5 | import { useTheme } from "next-themes";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 |
+  7 | export function CustomCursor() {
+  8 |     const { theme } = useTheme();
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/CustomCursor.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/StrangerThingsOverlay.tsx:3:1
+Module not found: Can't resolve 'next-themes'
+  1 | "use client";
+  2 |
+> 3 | import { useTheme } from "next-themes";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 | import { useEffect, useState } from "react";
+  5 | import { motion } from "framer-motion";
+  6 |
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/StrangerThingsOverlay.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ui/ThemeToggle.tsx:3:1
+Module not found: Can't resolve 'next-themes'
+  1 | "use client";
+  2 |
+> 3 | import { useTheme } from "next-themes";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 | import { useEffect, useState } from "react";
+  5 | import { motion } from "framer-motion";
+  6 | import { Sun, Moon, Skull } from "lucide-react";
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ui/ThemeToggle.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./src/components/landing/FeatureBento.tsx:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/landing/WorkbenchPreview.tsx:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/layout/DashboardShell.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/CustomCursor.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/StrangerThingsOverlay.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/ThemeToggle.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/landing/FeatureBento.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/landing/Footer.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/landing/Hero.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/landing/WorkbenchPreview.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/layout/DashboardShell.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/ThemeToggle.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/layout/DashboardShell.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/providers/ThemeProvider.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/CustomCursor.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/StrangerThingsOverlay.tsx:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ui/ThemeToggle.tsx:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)

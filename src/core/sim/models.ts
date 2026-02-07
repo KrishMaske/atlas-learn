@@ -172,7 +172,12 @@ export function processNode(
     case 'RATE_LIMITER': {
       const c = config as RateLimiterConfig;
       // Simple rate limiter: pass up to maxRequests per window, drop rest
-      const perTickLimit = Math.max(1, Math.floor(c.maxRequests / (c.windowMs / 100)));
+      // 1 tick = 100ms
+      // Formula: (maxRequests * 100) / windowMs
+      // We do NOT clamp to 1. If limit is low (e.g. 5 req / 1000ms), perTick might be 0.5 -> 0.
+      // This means it will block until enough tokens accumulate (not implemented here) or just block.
+      // For this simple model, 0 means explicit blocking.
+      const perTickLimit = Math.floor((c.maxRequests * 100) / c.windowMs);
       const allowed = newState.queue.splice(0, perTickLimit);
       const dropped = newState.queue.splice(0); // everything else
       for (const r of dropped) {

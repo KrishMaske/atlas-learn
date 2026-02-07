@@ -23,6 +23,7 @@ interface GraphStore extends GraphState {
   removeNode: (id: string) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
   updateNodeConfig: (id: string, config: Partial<NodeData['config']>) => void;
+  updateNodeLabel: (id: string, label: string) => void;
   selectNode: (id: string | null) => void;
 
   // Edge actions
@@ -87,6 +88,14 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     set((state) => ({
       nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, config: { ...n.config, ...config } as AnyNodeConfig } : n
+      ),
+    }));
+  },
+
+  updateNodeLabel: (id, label) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === id ? { ...n, label } : n
       ),
     }));
   },
