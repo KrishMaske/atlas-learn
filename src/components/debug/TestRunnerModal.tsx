@@ -7,6 +7,8 @@ import { graphSuite } from '@/core/tests/suites/graph.test';
 import { simulationSuite } from '@/core/tests/suites/simulation.test';
 import { codegenSuite } from '@/core/tests/suites/codegen.test';
 import { integrationSuite } from '@/core/tests/suites/integration.test';
+import { useGraphStore } from '@/core/graph/graphStore';
+import { NodeType } from '@/core/types';
 
 const ALL_SUITES = [graphSuite, simulationSuite, codegenSuite, integrationSuite];
 
@@ -103,7 +105,37 @@ export default function TestRunnerModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 flex justify-end">
+        <div className="p-4 border-t border-slate-800 flex justify-between">
+            <button
+                onClick={() => {
+                  // Generate a test flow: Client → API Gateway → REST API → Database
+                  const addNode = useGraphStore.getState().addNode;
+                  const addEdge = useGraphStore.getState().addEdge;
+                  const clearGraph = useGraphStore.getState().clearGraph;
+                  
+                  // Clear existing graph
+                  clearGraph();
+                  
+                  // Add nodes at specific positions
+                  const clientId = addNode('CLIENT' as NodeType, { x: 100, y: 200 });
+                  const gatewayId = addNode('API_GATEWAY' as NodeType, { x: 300, y: 200 });
+                  const restApiId = addNode('REST_API' as NodeType, { x: 500, y: 150 });
+                  const authId = addNode('AUTH_SERVICE' as NodeType, { x: 500, y: 280 });
+                  const dbId = addNode('SQL_DATABASE' as NodeType, { x: 700, y: 200 });
+                  
+                  // Connect them
+                  addEdge(clientId, gatewayId);
+                  addEdge(gatewayId, restApiId);
+                  addEdge(gatewayId, authId);
+                  addEdge(restApiId, dbId);
+                  addEdge(authId, dbId);
+                  
+                  onClose();
+                }}
+                className="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all"
+            >
+                🧪 Generate Test Flow
+            </button>
             <button
                 onClick={handleRunAll}
                 disabled={state.isRunning}

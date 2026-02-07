@@ -479,6 +479,44 @@ export default function InspectorPanel() {
                placeholder="Describe what this node does..."
                className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-xs font-mono border border-slate-600 h-16 resize-none focus:outline-none focus:border-blue-500"
              />
+             <button
+               onClick={async () => {
+                 const description = (selectedNode.config as any).jobSpec;
+                 if (!description) {
+                   alert('Please add a description first');
+                   return;
+                 }
+                 const btn = document.activeElement as HTMLButtonElement;
+                 if (btn) btn.disabled = true;
+                 try {
+                   const res = await fetch('/api/v1/ai/generate', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                       nodeId: selectedNode.id,
+                       nodeType: selectedNode.type,
+                       nodeLabel: selectedNode.label,
+                       description,
+                       currentCode: (selectedNode.config as any).customCode,
+                     }),
+                   });
+                   const data = await res.json();
+                   if (data.success && data.code) {
+                     handleChange({ customCode: data.code });
+                     alert('✅ Code generated! Switch to Code view to see it.');
+                   } else {
+                     alert('Failed to generate: ' + (data.error || 'Unknown error'));
+                   }
+                 } catch (err: any) {
+                   alert('Error: ' + err.message);
+                 } finally {
+                   if (btn) btn.disabled = false;
+                 }
+               }}
+               className="mt-2 w-full py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:opacity-90 transition-opacity text-xs font-medium flex items-center justify-center gap-1"
+             >
+               ✨ Generate Code
+             </button>
         </div>
       )}
 
