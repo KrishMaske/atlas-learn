@@ -1,26 +1,248 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* LIGHT MODE: "Laboratories" - Clean, Clinical, Glass */
+  --background: #f8fafc;
+  /* Slate 50 */
+  --foreground: #0f172a;
+  /* Slate 900 */
+
+  --card: rgba(255, 255, 255, 0.7);
+  --card-foreground: #1e293b;
+  --card-border: rgba(203, 213, 225, 0.6);
+  /* Slate 300 */
+
+  --popover: rgba(255, 255, 255, 0.9);
+  --popover-foreground: #0f172a;
+
+  --primary: #2563eb;
+  /* Blue 600 */
+  --primary-foreground: #ffffff;
+
+  --secondary: #e2e8f0;
+  /* Slate 200 */
+  --secondary-foreground: #1e293b;
+
+  --muted: #f1f5f9;
+  /* Slate 100 */
+  --muted-foreground: #64748b;
+  /* Slate 500 */
+
+  --accent: #eff6ff;
+  /* Blue 50 */
+  --accent-foreground: #1d4ed8;
+  /* Blue 700 */
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+
+  --radius: 0.75rem;
+
+  /* Glassmorphism utils */
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  --backdrop-blur: 16px;
+}
+
+[data-theme="dark"] {
+  /* DARK MODE: "Void" - Deep Space, Glowing Accents */
+  --background: #020617;
+  /* Slate 950 */
+  --foreground: #f8fafc;
+  /* Slate 50 */
+
+  --card: rgba(2, 6, 23, 0.4);
+  --card-foreground: #f1f5f9;
+  --card-border: rgba(30, 41, 59, 0.5);
+
+  --popover: rgba(2, 6, 23, 0.95);
+  --popover-foreground: #f8fafc;
+
+  --primary: #22d3ee;
+  /* Cyan 400 */
+  --primary-foreground: #020617;
+
+  --secondary: rgba(30, 41, 59, 0.5);
+  /* Slate 800/50 */
+  --secondary-foreground: #f8fafc;
+
+  --muted: #0f172a;
+  --muted-foreground: #94a3b8;
+
+  --accent: #1e293b;
+  --accent-foreground: #38bdf8;
+  /* Sky 400 */
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fca5a5;
+
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #22d3ee;
+
+  /* Glassmorphism utils */
+  --glass-bg: rgba(2, 6, 23, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes grid-move {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(60px);
+  }
+
+  /* Matches bg size */
+}
+
+.animate-grid-move {
+  animation: grid-move 20s linear infinite;
+}
+
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+[data-theme="stranger"] {
+  /* STRANGER THINGS: "Upside Down" - Organic, Toxic, Retro-Functional */
+  --background: #030005;
+  /* Deepest Void */
+  --foreground: #e0e6ed;
+
+  /* Panels are semi-transparent dark matter */
+  --card: rgba(20, 10, 20, 0.7);
+  --card-foreground: #d1d5db;
+  --card-border: rgba(185, 28, 28, 0.3);
+  /* Dim Red */
+
+  --popover: rgba(10, 5, 10, 0.95);
+  --popover-foreground: #e0e6ed;
+
+  --primary: #ef4444;
+  /* Red 500 */
+  --primary-foreground: #000000;
+
+  --secondary: #2a1015;
+  /* Dark Red/Brown */
+  --secondary-foreground: #fca5a5;
+
+  --muted: #1a0505;
+  --muted-foreground: #9ca3af;
+
+  --accent: #450a0a;
+  --accent-foreground: #fecaca;
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #ffffff;
+
+  --border: #450a0a;
+  --input: #450a0a;
+  --ring: #ef4444;
+
+  /* Custom Stranger Things Variables */
+  --stranger-glow: 0 0 15px rgba(239, 68, 68, 0.4);
+  --stranger-border-glow: 0 0 10px rgba(239, 68, 68, 0.3);
+  --stranger-text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  --crt-scanline: rgba(18, 16, 16, 0.1);
+
+  /* Glass override */
+  --glass-bg: rgba(20, 0, 0, 0.4);
+  --glass-border: rgba(220, 38, 38, 0.2);
+  --glass-shadow: 0 0 30px rgba(220, 38, 38, 0.1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base Styles & Resets */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Typography */
+  font-family: var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.015em;
+  /* Transitions */
+  transition: background-color 0.7s cubic-bezier(0.16, 1, 0.3, 1), color 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  @apply antialiased;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--backdrop-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Stranger Things Specifics */
+[data-theme="stranger"] body {
+  cursor: url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ef4444'/%3E%3Ccircle cx='16' cy='16' r='15' stroke='%23ef4444' stroke-width='1' stroke-opacity='0.5'/%3E%3Cline x1='16' y1='0' x2='16' y2='32' stroke='%23ef4444' stroke-width='1' stroke-opacity='0.2'/%3E%3Cline x1='0' y1='16' x2='32' y2='16' stroke='%23ef4444' stroke-width='1' stroke-opacity='0.2'/%3E%3C/svg%3E") 16 16, crosshair;
+}
+
+[data-theme="stranger"] .stranger-text-glow {
+  text-shadow: var(--stranger-text-shadow);
+}
+
+[data-theme="stranger"] .stranger-border-glow {
+  box-shadow: var(--stranger-border-glow);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
 }

@@ -52,8 +52,8 @@ function Slider({
   return (
     <div className="mb-3">
       <div className="flex justify-between text-sm mb-1">
-        <span className="text-slate-400">{label}</span>
-        <span className="text-white font-mono text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="text-foreground font-mono text-xs">
           {value}
           {unit}
         </span>
@@ -65,7 +65,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+        className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
       />
     </div>
   );
@@ -82,13 +82,13 @@ function Toggle({
 }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <span className="text-sm text-slate-400">{label}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
       <button
         onClick={() => onChange(!value)}
-        className={`w-9 h-5 rounded-full transition-colors ${value ? 'bg-blue-500' : 'bg-slate-600'}`}
+        className={`w-9 h-5 rounded-full transition-colors ${value ? 'bg-primary' : 'bg-muted'}`}
       >
         <div
-          className={`w-4 h-4 bg-white rounded-full transform transition-transform ${value ? 'translate-x-4' : 'translate-x-0.5'}`}
+          className={`w-4 h-4 bg-background rounded-full transform transition-transform ${value ? 'translate-x-4' : 'translate-x-0.5'}`}
         />
       </button>
     </div>
@@ -108,11 +108,11 @@ function SelectField<T extends string>({
 }) {
   return (
     <div className="mb-3">
-      <label className="text-slate-400 text-sm block mb-1">{label}</label>
+      <label className="text-muted-foreground text-sm block mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="w-full bg-slate-700 text-white rounded-lg px-3 py-1.5 text-sm border border-slate-600"
+        className="w-full bg-secondary text-foreground rounded-lg px-3 py-1.5 text-sm border border-border focus:outline-none focus:ring-1 focus:ring-primary"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -135,12 +135,12 @@ function TextInput({
 }) {
   return (
     <div className="mb-3">
-      <label className="text-slate-400 text-sm block mb-1">{label}</label>
+      <label className="text-muted-foreground text-sm block mb-1">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-slate-700 text-white rounded-lg px-3 py-1.5 text-sm border border-slate-600"
+        className="w-full bg-secondary text-foreground rounded-lg px-3 py-1.5 text-sm border border-border focus:outline-none focus:ring-1 focus:ring-primary"
       />
     </div>
   );
@@ -412,11 +412,11 @@ export default function InspectorPanel() {
 
   if (!selectedNode) {
     return (
-      <div className="w-72 bg-slate-900/80 backdrop-blur-sm border-l border-slate-700/50 p-4">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
+      <div className="w-72 bg-card/80 backdrop-blur-md border-l border-border p-4">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Inspector
         </h2>
-        <p className="text-slate-500 text-sm">Select a node to configure</p>
+        <p className="text-muted-foreground text-sm">Select a node to configure</p>
       </div>
     );
   }
@@ -430,93 +430,93 @@ export default function InspectorPanel() {
     const t = selectedNode.type as NodeType;
     const c = selectedNode.config;
     switch (t) {
-      case 'CLIENT':          return <ClientForm config={c as ClientConfig} onChange={handleChange} />;
-      case 'LOAD_BALANCER':   return <LoadBalancerForm config={c as LoadBalancerConfig} onChange={handleChange} />;
-      case 'API_GATEWAY':     return <ApiGatewayForm config={c as ApiGatewayConfig} onChange={handleChange} />;
-      case 'RATE_LIMITER':    return <RateLimiterForm config={c as RateLimiterConfig} onChange={handleChange} />;
-      case 'REST_API':        return <RestApiForm config={c as RestApiConfig} onChange={handleChange} />;
-      case 'GRAPHQL_API':     return <GraphqlApiForm config={c as GraphqlApiConfig} onChange={handleChange} />;
-      case 'AUTH_SERVICE':    return <AuthServiceForm config={c as AuthServiceConfig} onChange={handleChange} />;
-      case 'API':             return <ApiForm config={c as ApiConfig} onChange={handleChange} />;
-      case 'CACHE':           return <CacheForm config={c as CacheConfig} onChange={handleChange} />;
-      case 'REDIS_CACHE':     return <RedisCacheForm config={c as RedisCacheConfig} onChange={handleChange} />;
-      case 'DATABASE':        return <DatabaseForm config={c as DatabaseConfig} onChange={handleChange} />;
-      case 'SQL_DATABASE':    return <SqlDatabaseForm config={c as SqlDatabaseConfig} onChange={handleChange} />;
-      case 'NOSQL_DATABASE':  return <NosqlDatabaseForm config={c as NosqlDatabaseConfig} onChange={handleChange} />;
-      case 'OBJECT_STORAGE':  return <ObjectStorageForm config={c as ObjectStorageConfig} onChange={handleChange} />;
-      case 'QUEUE':           return <QueueForm config={c as QueueConfig} onChange={handleChange} />;
-      case 'WORKER':          return <WorkerForm config={c as WorkerConfig} onChange={handleChange} />;
+      case 'CLIENT': return <ClientForm config={c as ClientConfig} onChange={handleChange} />;
+      case 'LOAD_BALANCER': return <LoadBalancerForm config={c as LoadBalancerConfig} onChange={handleChange} />;
+      case 'API_GATEWAY': return <ApiGatewayForm config={c as ApiGatewayConfig} onChange={handleChange} />;
+      case 'RATE_LIMITER': return <RateLimiterForm config={c as RateLimiterConfig} onChange={handleChange} />;
+      case 'REST_API': return <RestApiForm config={c as RestApiConfig} onChange={handleChange} />;
+      case 'GRAPHQL_API': return <GraphqlApiForm config={c as GraphqlApiConfig} onChange={handleChange} />;
+      case 'AUTH_SERVICE': return <AuthServiceForm config={c as AuthServiceConfig} onChange={handleChange} />;
+      case 'API': return <ApiForm config={c as ApiConfig} onChange={handleChange} />;
+      case 'CACHE': return <CacheForm config={c as CacheConfig} onChange={handleChange} />;
+      case 'REDIS_CACHE': return <RedisCacheForm config={c as RedisCacheConfig} onChange={handleChange} />;
+      case 'DATABASE': return <DatabaseForm config={c as DatabaseConfig} onChange={handleChange} />;
+      case 'SQL_DATABASE': return <SqlDatabaseForm config={c as SqlDatabaseConfig} onChange={handleChange} />;
+      case 'NOSQL_DATABASE': return <NosqlDatabaseForm config={c as NosqlDatabaseConfig} onChange={handleChange} />;
+      case 'OBJECT_STORAGE': return <ObjectStorageForm config={c as ObjectStorageConfig} onChange={handleChange} />;
+      case 'QUEUE': return <QueueForm config={c as QueueConfig} onChange={handleChange} />;
+      case 'WORKER': return <WorkerForm config={c as WorkerConfig} onChange={handleChange} />;
       case 'STREAM_PROCESSOR': return <StreamProcessorForm config={c as StreamProcessorConfig} onChange={handleChange} />;
       case 'BATCH_PROCESSOR': return <BatchProcessorForm config={c as BatchProcessorConfig} onChange={handleChange} />;
-      case 'ANALYTICS_SINK':  return <AnalyticsSinkForm config={c as AnalyticsSinkConfig} onChange={handleChange} />;
-      case 'CUSTOM_LOGIC':    return <CustomLogicForm config={c as CustomLogicConfig} onChange={handleChange} />;
-      default:                return null;
+      case 'ANALYTICS_SINK': return <AnalyticsSinkForm config={c as AnalyticsSinkConfig} onChange={handleChange} />;
+      case 'CUSTOM_LOGIC': return <CustomLogicForm config={c as CustomLogicConfig} onChange={handleChange} />;
+      default: return null;
     }
   };
 
   return (
-    <div className="w-72 bg-slate-900/80 backdrop-blur-sm border-l border-slate-700/50 p-4 flex flex-col">
-      <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
+    <div className="w-72 bg-card/80 backdrop-blur-md border-l border-border p-4 flex flex-col">
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
         Inspector
       </h2>
 
       {/* Node Info */}
-      <div className="bg-slate-800/50 rounded-lg p-3 mb-4 flex items-center gap-3">
+      <div className="bg-muted/50 rounded-lg p-3 mb-4 flex items-center gap-3 border border-border">
         <span className="text-2xl">{visual?.icon}</span>
         <div className="min-w-0">
-          <h3 className="text-white font-medium text-sm truncate">{selectedNode.label}</h3>
-          <p className="text-slate-500 text-[10px] font-mono">{selectedNode.id}</p>
+          <h3 className="text-foreground font-medium text-sm truncate">{selectedNode.label}</h3>
+          <p className="text-muted-foreground text-[10px] font-mono">{selectedNode.id}</p>
         </div>
       </div>
 
       {/* Job Spec / Description */}
       {!['CLIENT', 'CUSTOM_LOGIC'].includes(selectedNode.type) && (
         <div className="mb-4">
-             <label className="text-slate-400 text-sm block mb-1">Job Description</label>
-             <textarea
-               value={(selectedNode.config as any).jobSpec || ''}
-               onChange={(e) => handleChange({ jobSpec: e.target.value })}
-               placeholder="Describe what this node does..."
-               className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-xs font-mono border border-slate-600 h-16 resize-none focus:outline-none focus:border-blue-500"
-             />
-             <button
-               onClick={async () => {
-                 const description = (selectedNode.config as any).jobSpec;
-                 if (!description) {
-                   alert('Please add a description first');
-                   return;
-                 }
-                 const btn = document.activeElement as HTMLButtonElement;
-                 if (btn) btn.disabled = true;
-                 try {
-                   const res = await fetch('/api/v1/ai/generate', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({
-                       nodeId: selectedNode.id,
-                       nodeType: selectedNode.type,
-                       nodeLabel: selectedNode.label,
-                       description,
-                       currentCode: (selectedNode.config as any).customCode,
-                     }),
-                   });
-                   const data = await res.json();
-                   if (data.success && data.code) {
-                     handleChange({ customCode: data.code });
-                     alert('✅ Code generated! Switch to Code view to see it.');
-                   } else {
-                     alert('Failed to generate: ' + (data.error || 'Unknown error'));
-                   }
-                 } catch (err: any) {
-                   alert('Error: ' + err.message);
-                 } finally {
-                   if (btn) btn.disabled = false;
-                 }
-               }}
-               className="mt-2 w-full py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:opacity-90 transition-opacity text-xs font-medium flex items-center justify-center gap-1"
-             >
-               ✨ Generate Code
-             </button>
+          <label className="text-muted-foreground text-sm block mb-1">Job Description</label>
+          <textarea
+            value={(selectedNode.config as any).jobSpec || ''}
+            onChange={(e) => handleChange({ jobSpec: e.target.value })}
+            placeholder="Describe what this node does..."
+            className="w-full bg-secondary text-foreground rounded-lg px-3 py-2 text-xs font-mono border border-border h-16 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <button
+            onClick={async () => {
+              const description = (selectedNode.config as any).jobSpec;
+              if (!description) {
+                alert('Please add a description first');
+                return;
+              }
+              const btn = document.activeElement as HTMLButtonElement;
+              if (btn) btn.disabled = true;
+              try {
+                const res = await fetch('/api/v1/ai/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    nodeId: selectedNode.id,
+                    nodeType: selectedNode.type,
+                    nodeLabel: selectedNode.label,
+                    description,
+                    currentCode: (selectedNode.config as any).customCode,
+                  }),
+                });
+                const data = await res.json();
+                if (data.success && data.code) {
+                  handleChange({ customCode: data.code });
+                  alert('✅ Code generated! Switch to Code view to see it.');
+                } else {
+                  alert('Failed to generate: ' + (data.error || 'Unknown error'));
+                }
+              } catch (err: any) {
+                alert('Error: ' + err.message);
+              } finally {
+                if (btn) btn.disabled = false;
+              }
+            }}
+            className="mt-2 w-full py-1.5 bg-gradient-to-r from-primary to-purple-600 text-primary-foreground rounded-lg hover:opacity-90 transition-opacity text-xs font-medium flex items-center justify-center gap-1"
+          >
+            ✨ Generate Code
+          </button>
         </div>
       )}
 
@@ -526,7 +526,7 @@ export default function InspectorPanel() {
       {/* Delete Button */}
       <button
         onClick={() => removeNode(selectedNode.id)}
-        className="mt-4 w-full py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
+        className="mt-4 w-full py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors text-sm hover:shadow-[0_0_10px_rgba(239,68,68,0.2)]"
       >
         Delete Node
       </button>

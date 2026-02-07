@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { CustomCursor } from "@/components/ui/CustomCursor";
+import { StrangerThingsOverlay } from "@/components/ui/StrangerThingsOverlay";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -10,6 +14,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -23,11 +33,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased font-sans`}
       >
-        {children}
+        <ThemeProvider
+          attribute="data-theme"
+          defaultTheme="stranger"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <StrangerThingsOverlay />
+          <CustomCursor />
+          <div className="fixed z-50 top-4 right-4">
+            <ThemeToggle />
+          </div>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

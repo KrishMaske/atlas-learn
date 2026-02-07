@@ -88,7 +88,7 @@ export default function SandboxPage() {
     if (!engineRef.current) {
       engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     }
-    
+
     const snapshot = engineRef.current.step();
     handleSimulationUpdate(snapshot);
     setIsSimulating(true);
@@ -119,58 +119,52 @@ export default function SandboxPage() {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950">
+    <div className="h-full flex flex-col bg-background/50 relative">
       {/* Top Bar */}
-      <header className="h-14 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 flex items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Atlas
-          </Link>
-          <span className="text-slate-600">|</span>
-          <span className="text-slate-400 text-sm">Sandbox</span>
+      {/* Toolbar / Controls Area */}
+      <div className="h-14 border-b border-border bg-card/30 backdrop-blur-sm flex items-center justify-between px-4 z-40">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground mr-2">Simulation</span>
+          <RunControls
+            isRunning={isSimulating && !isPaused}
+            isPaused={isPaused}
+            onStart={handleStart}
+            onPause={handlePause}
+            onStep={handleStep}
+            onReset={handleReset}
+          />
         </div>
-
-        <RunControls
-          isRunning={isSimulating && !isPaused}
-          isPaused={isPaused}
-          onStart={handleStart}
-          onPause={handlePause}
-          onStep={handleStep}
-          onReset={handleReset}
-        />
 
         <div className="flex items-center gap-2">
           {/* Test Runner */}
           <button
             onClick={() => setTestOpen(true)}
-            className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
+            className="px-3 py-1.5 bg-secondary text-secondary-foreground border border-border rounded-lg hover:bg-secondary/80 transition-colors text-xs font-medium flex items-center gap-1"
           >
             <span>🐞</span>
             <span className="hidden sm:inline">Test</span>
           </button>
 
           {/* Panel toggle */}
-          <div className="flex bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+          <div className="flex bg-muted rounded-lg border border-border overflow-hidden">
             <button
               onClick={() => {
                 setViewMode('visual');
                 setRightPanel('inspector');
               }}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === 'visual'
-                  ? 'bg-blue-500/20 text-blue-300'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'visual'
+                ? 'bg-primary/20 text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+                }`}
             >
               Visual
             </button>
             <button
               onClick={() => setViewMode('code')}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === 'code'
-                  ? 'bg-blue-500/20 text-blue-300'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'code'
+                ? 'bg-primary/20 text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+                }`}
             >
               Code
             </button>
@@ -179,19 +173,12 @@ export default function SandboxPage() {
           {/* Export */}
           <button
             onClick={() => setExportOpen(true)}
-            className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity text-xs font-medium"
+            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity text-xs font-medium"
           >
             Export
           </button>
-
-          <Link
-            href="/tutorial"
-            className="px-3 py-1.5 bg-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors text-xs"
-          >
-            Tutorials
-          </Link>
         </div>
-      </header>
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden flex flex-col">
@@ -217,7 +204,7 @@ export default function SandboxPage() {
             )}
           </div>
         ) : (
-            <GraphCodeView />
+          <GraphCodeView />
         )}
 
         {/* Bottom Toolbar (Simulation Controls) - only show in visual mode or both? Let's show in both */}
@@ -230,7 +217,7 @@ export default function SandboxPage() {
 
       {/* Export Dialog */}
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
-      
+
       {/* Test Runner Modal */}
       {testOpen && <TestRunnerModal onClose={() => setTestOpen(false)} />}
     </div>

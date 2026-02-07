@@ -35,7 +35,7 @@ export default function EdgeRenderer({
   const midX = (x1 + x2) / 2;
   const path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
 
-  const strokeColor = isSelected ? '#3b82f6' : (isActive ? '#22c55e' : '#64748b');
+  const strokeColor = isSelected ? 'var(--color-ring)' : (isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)');
   const strokeWidth = isSelected ? 4 : (isActive ? 3 : 2); // thicker when selected
 
   return (
@@ -53,13 +53,13 @@ export default function EdgeRenderer({
       {/* Arrow head */}
       <polygon
         points={`${x2},${y2} ${x2 - 10},${y2 - 5} ${x2 - 10},${y2 + 5}`}
-        fill={isActive ? '#22c55e' : '#64748b'}
+        fill={isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)'}
       />
 
       {/* Animated dots for active edges */}
       {isActive && (
         <>
-          <circle r="4" fill="#22c55e">
+          <circle r="4" fill="var(--color-primary)">
             <animateMotion
               dur="1s"
               repeatCount="indefinite"
@@ -67,7 +67,7 @@ export default function EdgeRenderer({
             />
           </circle>
           {requestCount > 1 && (
-            <circle r="4" fill="#22c55e">
+            <circle r="4" fill="var(--color-primary)">
               <animateMotion
                 dur="1s"
                 repeatCount="indefinite"
@@ -77,7 +77,7 @@ export default function EdgeRenderer({
             </circle>
           )}
           {requestCount > 2 && (
-            <circle r="4" fill="#22c55e">
+            <circle r="4" fill="var(--color-primary)">
               <animateMotion
                 dur="1s"
                 repeatCount="indefinite"
@@ -98,13 +98,13 @@ export default function EdgeRenderer({
             width="24"
             height="20"
             rx="4"
-            fill="#1e293b"
-            stroke="#475569"
+            fill="var(--color-secondary)"
+            stroke="var(--color-border)"
           />
           <text
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="#94a3b8"
+            fill="var(--color-secondary-foreground)"
             fontSize="10"
             fontWeight="bold"
           >

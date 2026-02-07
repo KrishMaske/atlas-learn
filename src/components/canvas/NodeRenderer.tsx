@@ -63,7 +63,7 @@ export default function NodeRenderer({
       <span className="text-2xl">{visual.icon}</span>
 
       {/* Node Label */}
-      <span className="text-xs font-medium text-white/90 text-center px-2 truncate w-full">
+      <span className="text-xs font-semibold text-foreground text-center px-2 truncate w-full">
         {node.label}
       </span>
 
