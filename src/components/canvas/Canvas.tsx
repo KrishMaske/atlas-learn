@@ -24,6 +24,7 @@ interface CanvasProps {
   isSimulating?: boolean;
 }
 
+// Replace entire Canvas functional component logic
 export default function Canvas({
   draggedNodeType,
   simulationMetrics,
@@ -41,11 +42,22 @@ export default function Canvas({
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Edge creation state
-  const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
+  // Edge drag state (connection)
+  const [draggedEdge, setDraggedEdge] = useState<{ sourceId: string; px: number; py: number } | null>(null);
 
-  const { nodes, edges, selectedNodeId, addNode, updateNodePosition, selectNode, addEdge } =
-    useGraphStore();
+  const {
+    nodes,
+    edges,
+    selectedNodeId,
+    selectedEdgeId,
+    addNode,
+    removeNode,
+    updateNodePosition,
+    selectNode,
+    selectEdge,
+    addEdge,
+    removeEdge,
+  } = useGraphStore();
 
   // Convert screen coords to canvas coords (accounting for pan + zoom)
   const screenToCanvas = useCallback(
@@ -73,10 +85,15 @@ export default function Canvas({
   // ---------- Pan ----------
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     // Only start pan on middle-click or when clicking the background
-    if (e.button === 1 || (e.button === 0 && e.target === canvasRef.current?.firstChild)) {
+    if (e.button === 1 || (e.button === 0 && e.target === canvasRef.current || e.target === canvasRef.current?.querySelector('.grid-bg'))) {
       setIsPanning(true);
       panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-      e.preventDefault();
+      // e.preventDefault(); // Don't prevent default here to allow focus
+    }
+    // Deselect if clicking empty space
+    if (e.target === canvasRef.current || e.target === canvasRef.current?.querySelector('.grid-bg')) {
+        selectNode(null);
+        selectEdge(null);
     }
   };
 
@@ -94,14 +111,33 @@ export default function Canvas({
           y: snapToGrid(y + dragOffset.y),
         });
       }
+
+      if (draggedEdge) {
+        const { x, y } = screenToCanvas(e.clientX, e.clientY);
+        setDraggedEdge({ ...draggedEdge, px: x, py: y });
+      }
     },
-    [isPanning, draggingNodeId, dragOffset, screenToCanvas, updateNodePosition],
+    [isPanning, draggingNodeId, draggedEdge, dragOffset, screenToCanvas, updateNodePosition],
   );
 
-  const handleMouseUp = useCallback(() => {
-    setIsPanning(false);
-    setDraggingNodeId(null);
-  }, []);
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      setIsPanning(false);
+      setDraggingNodeId(null);
+
+      // Handle connection drop
+      if (draggedEdge) {
+        setDraggedEdge(null);
+        // Ensure we check if we dropped ON a node (handled by mouseUp on NodeRenderer ideally,
+        // but since we have global mouseup here, we rely on the fact that Node's onMouseUp
+        // propagation might ideally handle it, OR we do hit testing.
+        // EASIER WAY: NodeRenderer's onMouseUp fires BEFORE window's onMouseUp or bubble up.
+        // Actually, we can use document.elementFromPoint if we really needed to,
+        // but let's try a simpler approach: NodeRenderer onMouseUp handles the 'connect' action.
+      }
+    },
+    [draggedEdge]
+  );
 
   // ---------- Zoom (scroll wheel) ----------
   useEffect(() => {
@@ -118,53 +154,79 @@ export default function Canvas({
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
+  // ---------- Keyboard Shortcuts (Delete) ----------
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+          // Ignore if input/textarea is focused
+          if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+          if (selectedNodeId) {
+              removeNode(selectedNodeId);
+          } else if (selectedEdgeId) {
+              removeEdge(selectedEdgeId);
+          }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, selectedEdgeId, removeNode, removeEdge]);
+
+
   // ---------- Node interactions ----------
   const handleNodeDragStart = useCallback(
     (nodeId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return;
+      
+      // Check if clicking on a "handle" or special zone? 
+      // For now, let's say Shift+Drag or dragging from a specific port triggers connection?
+      // User asked for "Drag and create arrows" typically meaning drag from a handle.
+      // We will assume the NodeRenderer calls a specific prop for connection start.
+      
       const canvas = screenToCanvas(e.clientX, e.clientY);
       setDraggingNodeId(nodeId);
       setDragOffset({ x: node.position.x - canvas.x, y: node.position.y - canvas.y });
+      selectNode(nodeId);
+      selectEdge(null);
     },
-    [nodes, screenToCanvas],
+    [nodes, screenToCanvas, selectNode, selectEdge],
   );
 
-  const handleNodeDoubleClick = useCallback(
-    (nodeId: string) => {
-      if (connectingFrom === null) {
-        setConnectingFrom(nodeId);
-      } else if (connectingFrom !== nodeId) {
-        addEdge(connectingFrom, nodeId);
-        setConnectingFrom(null);
-      } else {
-        setConnectingFrom(null);
-      }
-    },
-    [connectingFrom, addEdge],
-  );
+  const startConnection = useCallback((nodeId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const { x, y } = screenToCanvas(e.clientX, e.clientY);
+      setDraggedEdge({ sourceId: nodeId, px: x, py: y });
+  }, [screenToCanvas]);
 
-  const handleCanvasClick = () => {
-    selectNode(null);
-    setConnectingFrom(null);
-  };
+  const completeConnection = useCallback((targetId: string, e: React.MouseEvent) => {
+     if (draggedEdge) {
+         e.stopPropagation(); // prevent drag end from clearing immediately before we act
+         if (draggedEdge.sourceId !== targetId) {
+             addEdge(draggedEdge.sourceId, targetId);
+         }
+         setDraggedEdge(null);
+     }
+  }, [draggedEdge, addEdge]);
 
   return (
     <div
       ref={canvasRef}
-      className="flex-1 relative bg-slate-950 overflow-hidden select-none"
+      className="flex-1 relative bg-slate-950 overflow-hidden select-none outline-none"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onMouseDown={handleCanvasMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onClick={handleCanvasClick}
       style={{ cursor: isPanning ? 'grabbing' : 'default' }}
+      tabIndex={0}
     >
       {/* Grid background (moves with pan, scales with zoom) */}
       <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
+        className="active-grid-bg absolute inset-0 opacity-20 pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(to right, #334155 1px, transparent 1px),
@@ -174,13 +236,6 @@ export default function Canvas({
           backgroundPosition: `${pan.x}px ${pan.y}px`,
         }}
       />
-
-      {/* Connection mode indicator */}
-      {connectingFrom && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-500/80 text-white px-4 py-2 rounded-full text-sm z-50">
-          Click another node to connect &middot; ESC to cancel
-        </div>
-      )}
 
       {/* Zoom indicator */}
       <div className="absolute bottom-4 right-4 z-40 flex items-center gap-2 bg-slate-800/80 backdrop-blur-sm rounded-lg px-3 py-1.5 text-xs text-slate-400">
@@ -219,47 +274,94 @@ export default function Canvas({
           {edges.map((edge) => {
             const metrics = simulationMetrics?.get(edge.sourceId);
             return (
-              <EdgeRenderer
-                key={edge.id}
-                edge={edge}
-                nodes={nodes}
-                isActive={isSimulating && !!metrics}
-                requestCount={metrics?.requestCount || 0}
-              />
+              <g key={edge.id} onClick={(e) => { e.stopPropagation(); selectEdge(edge.id); }} className="cursor-pointer pointer-events-auto">
+                <EdgeRenderer
+                  edge={edge}
+                  nodes={nodes}
+                  isActive={isSimulating && !!metrics}
+                  requestCount={metrics?.requestCount || 0}
+                  // We can pass isSelected prop if EdgeRenderer supports it
+                />
+                 {/* Highlight for selection */}
+                 {selectedEdgeId === edge.id && (
+                    <path
+                        d={`M ${nodes.find(n => n.id === edge.sourceId)?.position.x! + 64} ${nodes.find(n => n.id === edge.sourceId)?.position.y} L ${nodes.find(n => n.id === edge.targetId)?.position.x! - 64} ${nodes.find(n => n.id === edge.targetId)?.position.y}`} // Approximate path for selection highlight (Curve logic is inside EdgeRenderer, ideally we refactor exposure)
+                        // Actually, EdgeRenderer handles curved path calculation. Let's trust EdgeRenderer visual update for selection if we passed it down, 
+                        // but since we aren't modifying EdgeRenderer prop signature in this step, let's assume we reuse the component or add a simple overlay?
+                        // Better: We should have updated EdgeRenderer props to accept 'isSelected'. 
+                        // Since I can't change it here without updating the component file again, I'll rely on global store or update EdgeRenderer in next step if needed.
+                        // Wait, I updated EdgeRenderer in previous step? No, I just viewed it. I missed updating EdgeRenderer to accept isSelected.
+                        // Correcting plan: I will update EdgeRenderer props in a subsequent call if I haven't already. 
+                        // Actually, looking at my history, I only viewed it. I need to update it.
+                        // For now, I'll allow clicking it to select it.
+                         stroke="rgba(59, 130, 246, 0.5)"
+                         strokeWidth="10"
+                         fill="none"
+                         className="opacity-0 hover:opacity-100 transition-opacity" // Invisible hit area
+                    />
+                 )}
+              </g>
             );
           })}
+          
+          {/* Dragged Connection Line */}
+          {draggedEdge && ((() => {
+             const source = nodes.find(n => n.id === draggedEdge.sourceId);
+             if (!source) return null;
+             return (
+                 <line 
+                    x1={source.position.x + 64} 
+                    y1={source.position.y} 
+                    x2={draggedEdge.px} 
+                    y2={draggedEdge.py} 
+                    stroke="#3b82f6" 
+                    strokeWidth="2" 
+                    strokeDasharray="5,5" 
+                 />
+             );
+          })())}
+
         </svg>
 
         {/* Nodes */}
         {nodes.map((node) => {
           const metrics = simulationMetrics?.get(node.id);
           return (
-            <NodeRenderer
-              key={node.id}
-              node={node}
-              isSelected={selectedNodeId === node.id || connectingFrom === node.id}
-              onSelect={() => {
-                if (connectingFrom !== null) {
-                  handleNodeDoubleClick(node.id);
-                } else {
-                  selectNode(node.id);
-                }
-              }}
-              onDoubleClick={() => handleNodeDoubleClick(node.id)}
-              onDragStart={(e) => handleNodeDragStart(node.id, e)}
-              utilization={metrics?.utilization || 0}
-            />
+            <div key={node.id} className="absolute" style={{ left: 0, top: 0 }}>
+                <NodeRenderer
+                  node={node}
+                  isSelected={selectedNodeId === node.id}
+                  onSelect={() => selectNode(node.id)}
+                  onDoubleClick={() => {}} // Double click no longer needed for connect? Keep for safety.
+                  onDragStart={(e) => handleNodeDragStart(node.id, e)}
+                  utilization={metrics?.utilization || 0}
+                />
+                
+                {/* Connection Handles (Overlay on top of NodeRenderer) */}
+                {/* Right Handle (Output) - Start Drag */}
+                <div 
+                    className="absolute w-4 h-4 bg-transparent cursor-crosshair hover:bg-blue-500/50 rounded-full"
+                    style={{ left: node.position.x + 64 - 8, top: node.position.y - 8 }}
+                    onMouseDown={(e) => startConnection(node.id, e)}
+                />
+                
+                {/* Left Handle (Input) - Drop Target */}
+                <div 
+                    className="absolute w-6 h-6 bg-transparent rounded-full"
+                    style={{ left: node.position.x - 64 - 12, top: node.position.y - 12 }}
+                    onMouseUp={(e) => completeConnection(node.id, e)}
+                />
+            </div>
           );
         })}
       </div>
 
-      {/* Empty state */}
       {nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center text-slate-500">
             <p className="text-lg mb-2">Drag components from the left panel</p>
-            <p className="text-sm">Double-click nodes to connect them</p>
-            <p className="text-xs mt-2 text-slate-600">Scroll to zoom &middot; Middle-click to pan</p>
+            <p className="text-sm">Drag from right-side handles to connect nodes</p>
+             <p className="text-sm">Select and press Delete to remove items</p>
           </div>
         </div>
       )}

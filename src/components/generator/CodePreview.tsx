@@ -146,7 +146,7 @@ export default function CodePreview() {
   const generated = useMemo(() => {
     if (nodes.length === 0) return [];
     try {
-      const graph = { nodes, edges, selectedNodeId: null };
+      const graph = { nodes, edges, selectedNodeId: null, selectedEdgeId: null };
       const ir = compileGraphToIR(graph, projectName);
       return generateCode(ir);
     } catch {

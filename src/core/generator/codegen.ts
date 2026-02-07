@@ -276,6 +276,11 @@ function generateServiceFile(service: IRService, ir: IR): GeneratedFile {
 }
 
 function generateServiceCode(svc: IRService, ir: IR): string {
+  // Check for custom code override
+  if (svc.config.customCode) {
+      return generateCustomServiceCode(svc, ir, svc.config.customCode);
+  }
+
   switch (svc.nodeType) {
     case 'LOAD_BALANCER':
       return genLoadBalancer(svc, ir);
@@ -315,6 +320,99 @@ function generateServiceCode(svc: IRService, ir: IR): string {
     default:
       return genGenericService(svc, ir);
   }
+}
+
+// Helper to wrap custom code in standard service boilerplate
+function generateCustomServiceCode(svc: IRService, ir: IR, customCode: string): string {
+    return `${header(svc)}
+import express from 'express';
+import cors from 'cors';
+import { log } from '../shared/logger';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', service: '${svc.slug}' });
+});
+
+// User implementation
+const userLogic = async (input: any, context: any) => {
+    // Injected custom code
+    // The user writes: return input;
+    // We wrap it in an async IIFE or function body
+    /* 
+       Available vars: 
+       - input: request body or data
+       - context: { log, ... }
+    */
+    try {
+        ${customCode}
+    } catch (err: any) {
+        throw new Error(err.message);
+    }
+};
+
+app.all('*', async (req, res) => {
+    // If health check, skip (handled above, but express matches order)
+    if (req.path === '/health') return;
+
+    log('${svc.slug}', \`Processing \${req.method} \${req.path}\`);
+    try {
+        const input = {
+            method: req.method,
+            path: req.path,
+            body: req.body,
+            query: req.query,
+            headers: req.headers
+        };
+        
+        const mockConsole = {
+            log: (...args: any[]) => log('${svc.slug}', args.join(' ')),
+            error: (...args: any[]) => log('${svc.slug}', 'ERROR:', args.join(' '))
+        };
+
+        // Execute user function
+        // Note: For real code generation, we just dump the code. 
+        // We assume the user wrote valid function body code.
+        // But to make it runnable TS, we need to wrap it carefully.
+        // Simplest: We put the code inside the route handler.
+        
+        // Dynamic evaluation in generated code? 
+        // Better: We treat 'customCode' as the BODY of the handler.
+        
+        // Let's redefine userLogic to be inline to access 'res' if needed?
+        // Or simpler: User code returns the response DATA.
+        
+        /* 
+           User code example:
+           console.log('Got', input);
+           return { success: true };
+        */
+        
+        // We need to wrap it in a function invocation
+        const fn = new Function('input', 'console', \`
+            return (async () => {
+                ${customCode}
+            })();
+        \`);
+        
+        const result = await fn(input, mockConsole);
+        res.json(result);
+
+    } catch (err: any) {
+        log('${svc.slug}', 'Execution failed', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.listen(${svc.port}, () => {
+  log('${svc.slug}', 'Custom Service listening on port ${svc.port}');
+});
+
+export default app;
+`;
 }
 
 // Helper: generate downstream call code

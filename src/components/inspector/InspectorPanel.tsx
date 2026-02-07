@@ -469,6 +469,19 @@ export default function InspectorPanel() {
         </div>
       </div>
 
+      {/* Job Spec / Description */}
+      {!['CLIENT', 'CUSTOM_LOGIC'].includes(selectedNode.type) && (
+        <div className="mb-4">
+             <label className="text-slate-400 text-sm block mb-1">Job Description</label>
+             <textarea
+               value={(selectedNode.config as any).jobSpec || ''}
+               onChange={(e) => handleChange({ jobSpec: e.target.value })}
+               placeholder="Describe what this node does..."
+               className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-xs font-mono border border-slate-600 h-16 resize-none focus:outline-none focus:border-blue-500"
+             />
+        </div>
+      )}
+
       {/* Config Form */}
       <div className="flex-1 overflow-y-auto">{renderForm()}</div>
 

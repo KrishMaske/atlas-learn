@@ -74,9 +74,9 @@ export default function TutorialPage() {
   // Start simulation
   const handleStart = useCallback(() => {
     if (!engineRef.current) {
-      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null });
+      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     } else {
-      engineRef.current.updateGraph({ nodes, edges, selectedNodeId: null });
+      engineRef.current.updateGraph({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     }
 
     setIsSimulating(true);
@@ -102,7 +102,7 @@ export default function TutorialPage() {
   // Step simulation
   const handleStep = useCallback(() => {
     if (!engineRef.current) {
-      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null });
+      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     }
     
     const snapshot = engineRef.current.step();
@@ -202,6 +202,52 @@ export default function TutorialPage() {
                 </div>
               </button>
             ))}
+          </div>
+
+          {/* Educational Resources */}
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <span className="text-3xl">📚</span> Engineering Resources
+            </h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                   📺 Recommended Channels
+                </h3>
+                <ul className="space-y-3">
+                  <li>
+                    <a href="https://www.youtube.com/@ByteByteGo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                      ByteByteGo (Alex Xu)
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.youtube.com/@hnasr" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                      Hussein Nasser (Backend Engineering)
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                   📖 Written Guides
+                </h3>
+                <ul className="space-y-3">
+                  <li>
+                    <a href="https://github.com/donnemartin/system-design-primer" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                      <span className="text-xl">🐙</span> The System Design Primer
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://roadmap.sh/backend" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                      <span className="text-xl">🗺️</span> Backend Developer Roadmap
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <div className="mt-12 text-center">

@@ -38,6 +38,7 @@ const level1Graph: GraphState = {
     createEdge('e2', 'api1', 'db1'),
   ],
   selectedNodeId: null,
+  selectedEdgeId: null,
 };
 
 const level1: TutorialLevel = {
@@ -91,6 +92,7 @@ const level2Graph: GraphState = {
     createEdge('e2', 'api1', 'db1'),
   ],
   selectedNodeId: null,
+  selectedEdgeId: null,
 };
 
 const level2: TutorialLevel = {
@@ -146,6 +148,7 @@ const level3Graph: GraphState = {
     createEdge('e2', 'api1', 'db1'),
   ],
   selectedNodeId: null,
+  selectedEdgeId: null,
 };
 
 const level3: TutorialLevel = {

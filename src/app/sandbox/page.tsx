@@ -12,6 +12,9 @@ import RunControls from '@/components/sim/RunControls';
 import MetricsPanel from '@/components/sim/MetricsPanel';
 import CodePreview from '@/components/generator/CodePreview';
 import ExportDialog from '@/components/generator/ExportDialog';
+import NodeCodeEditor from '@/components/sandbox/NodeCodeEditor';
+import GraphCodeView from '@/components/sandbox/GraphCodeView';
+import TestRunnerModal from '@/components/debug/TestRunnerModal';
 import Link from 'next/link';
 
 // =============================================================================
@@ -28,7 +31,9 @@ export default function SandboxPage() {
   const [tick, setTick] = useState(0);
   const [simulationMetrics, setSimulationMetrics] = useState<Map<string, { utilization: number; requestCount: number }>>(new Map());
   const [rightPanel, setRightPanel] = useState<RightPanel>('inspector');
+  const [viewMode, setViewMode] = useState<'visual' | 'code'>('visual');
   const [exportOpen, setExportOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
 
   const engineRef = useRef<SimulationEngine | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -53,9 +58,9 @@ export default function SandboxPage() {
   // Start simulation
   const handleStart = useCallback(() => {
     if (!engineRef.current) {
-      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null });
+      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     } else {
-      engineRef.current.updateGraph({ nodes, edges, selectedNodeId: null });
+      engineRef.current.updateGraph({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     }
 
     setIsSimulating(true);
@@ -81,7 +86,7 @@ export default function SandboxPage() {
   // Step simulation
   const handleStep = useCallback(() => {
     if (!engineRef.current) {
-      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null });
+      engineRef.current = new SimulationEngine({ nodes, edges, selectedNodeId: null, selectedEdgeId: null });
     }
     
     const snapshot = engineRef.current.step();
@@ -135,22 +140,34 @@ export default function SandboxPage() {
         />
 
         <div className="flex items-center gap-2">
+          {/* Test Runner */}
+          <button
+            onClick={() => setTestOpen(true)}
+            className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
+          >
+            <span>🐞</span>
+            <span className="hidden sm:inline">Test</span>
+          </button>
+
           {/* Panel toggle */}
           <div className="flex bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
             <button
-              onClick={() => setRightPanel('inspector')}
+              onClick={() => {
+                setViewMode('visual');
+                setRightPanel('inspector');
+              }}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                rightPanel === 'inspector'
+                viewMode === 'visual'
                   ? 'bg-blue-500/20 text-blue-300'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Inspector
+              Visual
             </button>
             <button
-              onClick={() => setRightPanel('code')}
+              onClick={() => setViewMode('code')}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                rightPanel === 'code'
+                viewMode === 'code'
                   ? 'bg-blue-500/20 text-blue-300'
                   : 'text-slate-400 hover:text-white'
               }`}
@@ -176,26 +193,36 @@ export default function SandboxPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Node Palette */}
-        <NodePalette onDragStart={setDraggedNodeType} />
+      {/* Main Content Area */}
+      <div className="flex-1 relative overflow-hidden flex flex-col">
+        {viewMode === 'visual' ? (
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left: Node Palette */}
+            <NodePalette onDragStart={setDraggedNodeType} />
 
-        {/* Center: Canvas */}
-        <Canvas
-          draggedNodeType={draggedNodeType}
-          simulationMetrics={simulationMetrics}
-          isSimulating={isSimulating && !isPaused}
-        />
+            {/* Center: Canvas */}
+            <Canvas
+              draggedNodeType={draggedNodeType}
+              simulationMetrics={simulationMetrics}
+              isSimulating={isSimulating && !isPaused}
+            />
 
-        {/* Right: Inspector or Code Preview */}
-        {rightPanel === 'inspector' ? (
-          <InspectorPanel />
-        ) : (
-          <div className="w-[480px] border-l border-slate-700/50">
-            <CodePreview />
+            {/* Right: Inspector or Code Preview */}
+            {rightPanel === 'inspector' ? (
+              <InspectorPanel />
+            ) : (
+              <div className="w-[480px] border-l border-slate-700/50">
+                <CodePreview />
+              </div>
+            )}
           </div>
+        ) : (
+            <GraphCodeView />
         )}
+
+        {/* Bottom Toolbar (Simulation Controls) - only show in visual mode or both? Let's show in both */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2 rounded-xl shadow-2xl z-20">
+        </div>
       </div>
 
       {/* Bottom: Metrics */}
@@ -203,6 +230,9 @@ export default function SandboxPage() {
 
       {/* Export Dialog */}
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
+      
+      {/* Test Runner Modal */}
+      {testOpen && <TestRunnerModal onClose={() => setTestOpen(false)} />}
     </div>
   );
 }

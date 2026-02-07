@@ -18,7 +18,8 @@ export default function EdgeRenderer({
   nodes,
   isActive = false,
   requestCount = 0,
-}: EdgeRendererProps) {
+  isSelected = false,
+}: EdgeRendererProps & { isSelected?: boolean }) {
   const sourceNode = nodes.find((n) => n.id === edge.sourceId);
   const targetNode = nodes.find((n) => n.id === edge.targetId);
 
@@ -34,14 +35,17 @@ export default function EdgeRenderer({
   const midX = (x1 + x2) / 2;
   const path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
 
+  const strokeColor = isSelected ? '#3b82f6' : (isActive ? '#22c55e' : '#64748b');
+  const strokeWidth = isSelected ? 4 : (isActive ? 3 : 2); // thicker when selected
+
   return (
     <g>
       {/* Main edge line */}
       <path
         d={path}
         fill="none"
-        stroke={isActive ? '#22c55e' : '#64748b'}
-        strokeWidth={isActive ? 3 : 2}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         className={isActive ? 'transition-all duration-300' : ''}
       />

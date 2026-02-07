@@ -28,6 +28,7 @@ interface GraphStore extends GraphState {
   // Edge actions
   addEdge: (sourceId: string, targetId: string) => string | null;
   removeEdge: (id: string) => void;
+  selectEdge: (id: string | null) => void;
 
   // Graph actions
   clearGraph: () => void;
@@ -43,6 +44,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  selectedEdgeId: null,
 
   // -------------------------------------------------------------------------
   // Node Actions
@@ -90,7 +92,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   },
 
   selectNode: (id) => {
-    set({ selectedNodeId: id });
+    set({ selectedNodeId: id, selectedEdgeId: null });
   },
 
   // -------------------------------------------------------------------------
@@ -127,7 +129,12 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   removeEdge: (id) => {
     set((state) => ({
       edges: state.edges.filter((e) => e.id !== id),
+      selectedEdgeId: state.selectedEdgeId === id ? null : state.selectedEdgeId,
     }));
+  },
+
+  selectEdge: (id: string | null) => {
+    set({ selectedEdgeId: id, selectedNodeId: null });
   },
 
   // -------------------------------------------------------------------------
@@ -135,7 +142,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   // -------------------------------------------------------------------------
 
   clearGraph: () => {
-    set({ nodes: [], edges: [], selectedNodeId: null });
+    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null });
     nodeCounter = 0;
     edgeCounter = 0;
   },
@@ -145,6 +152,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       nodes: graph.nodes,
       edges: graph.edges,
       selectedNodeId: null,
+      selectedEdgeId: null,
     });
     // Update counters to avoid ID collisions
     nodeCounter = graph.nodes.length;

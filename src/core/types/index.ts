@@ -78,6 +78,8 @@ export interface Position {
 interface BaseNodeConfig {
   capacity: number; // max requests per second
   baseLatency: number; // processing time in ms
+  jobSpec?: string; // description of the node's responsibility
+  customCode?: string; // user-defined implementation logic
 }
 
 // --- Traffic -----------------------------------------------------------
@@ -85,6 +87,8 @@ interface BaseNodeConfig {
 export interface ClientConfig {
   rps: number;
   burstMultiplier: number;
+  jobSpec?: string;
+  customCode?: string;
 }
 
 // --- Networking --------------------------------------------------------
@@ -106,6 +110,8 @@ export interface RateLimiterConfig {
   windowMs: number; // time window in ms
   capacity: number;
   baseLatency: number;
+  jobSpec?: string;
+  customCode?: string;
 }
 
 // --- APIs --------------------------------------------------------------
@@ -176,6 +182,8 @@ export interface ObjectStorageConfig extends BaseNodeConfig {
 export interface QueueConfig {
   maxSize: number;
   dropPolicy: 'DROP_OLDEST' | 'REJECT_NEW';
+  jobSpec?: string;
+  customCode?: string;
 }
 
 export interface WorkerConfig extends BaseNodeConfig {
@@ -254,6 +262,7 @@ export interface GraphState {
   nodes: NodeData[];
   edges: EdgeData[];
   selectedNodeId: string | null;
+  selectedEdgeId: string | null;
 }
 
 // -----------------------------------------------------------------------------

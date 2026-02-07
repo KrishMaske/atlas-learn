@@ -25,6 +25,7 @@
 
 3. **Code Generation & Export:**
    - Real-time code preview (tab-based file viewer)
+   - **Download as ZIP** (full project structure)
    - Download as bundle (single file with separators) or individual files
    - Includes: service implementations, shared utilities, Docker Compose, package.json, tsconfig, README
 
@@ -302,7 +303,8 @@ interface GraphState {
 - **Snap-to-Grid**: 40px grid, nodes snap when placed
 - **Drag-and-Drop**: Drag nodes from palette onto canvas
 - **Node Selection**: Click node to select (shows in Inspector)
-- **Edge Creation**: Drag from node port to another node port (visual feedback TBD or implicit)
+- **Edge Creation**: Drag from node handle (right side) to target node handle (left side)
+- **Edge Deletion**: Click edge to select, press Delete/Backspace to remove
 - **Visualization**: Real-time metrics (utilization color gradient on nodes during simulation)
 
 ### Node Palette (NodePalette.tsx)
@@ -318,7 +320,7 @@ interface GraphState {
   - Toggles: Auth enabled, rate limiting, CORS, etc.
   - Selects: Algorithm (ROUND_ROBIN/LEAST_CONNECTIONS/RANDOM/IP_HASH), engine (POSTGRES/MYSQL/MONGODB/DYNAMODB), etc.
   - Text inputs: Path, region, consumer group, custom code
-  - Textarea: Custom logic code editor
+  - Textarea: Custom logic code editor, Job Description/Spec
 - **Delete Button**: Remove selected node
 - **Node Info**: Shows icon, label, and node ID
 
@@ -334,8 +336,9 @@ interface GraphState {
 ### Export Dialog (ExportDialog.tsx)
 - **Modal**: Centered dialog with project name input
 - **Export Options**:
+  - "Download ZIP": Full project archive (Recommended)
   - "Download Bundle": Single .txt file with all files separated by headers (easy to manually split)
-  - "Download Files": Individual .txt files (with path separators converted to underscores) + setup shell script
+  - "Download Files": Individual .txt files (with path separators converted to underscores) + setup.sh helper script
 - **Summary**: Shows file count, total lines of code, included components
 - **Status**: Shows "Exporting..." during download
 - **Validation**: Disables buttons if no service nodes exist
