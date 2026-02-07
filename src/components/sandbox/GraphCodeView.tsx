@@ -28,14 +28,23 @@ interface GraphCodeViewProps {
 
 export default function GraphCodeView({ serverState, isStarting, onStartServer, onStopServer }: GraphCodeViewProps) {
   const { nodes, edges, updateNodeConfig } = useGraphStore();
-  const [code, setCode] = useState<string>('');
-  const [isDirty, setIsDirty] = useState(false);
-  const lastGeneratedCodeRef = useRef<string>('');
+  
+  // Derived generated code
+  const graph = React.useMemo(() => ({ nodes, edges, selectedNodeId: null, selectedEdgeId: null }), [nodes, edges]);
+  const generatedCode = React.useMemo(() => graphToCode(graph), [graph]);
+
+  // User overrides & File Viewing state
+  const [userCode, setUserCode] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
 
   // File Explorer State
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [viewingFile, setViewingFile] = useState(false);
+
+  // Computed state
+  const isDirty = !viewingFile && userCode !== null && userCode !== generatedCode;
+  const displayCode = viewingFile ? (fileContent || '') : (userCode ?? generatedCode);
 
   // Fetch file list when server is running
   useEffect(() => {
@@ -57,11 +66,14 @@ export default function GraphCodeView({ serverState, isStarting, onStartServer, 
       interval = setInterval(fetchFiles, 3000); // Poll every 3s
     } else {
       setFiles([]);
-      setViewingFile(false);
-      setSelectedFile(null);
+      if (viewingFile) {
+        setViewingFile(false);
+        setSelectedFile(null);
+        setFileContent(null);
+      }
     }
     return () => clearInterval(interval);
-  }, [serverState.running, serverState.pid]);
+  }, [serverState.running, serverState.pid, viewingFile]);
 
   // Load a specific file
   const handleFileClick = async (filename: string) => {
@@ -74,70 +86,55 @@ export default function GraphCodeView({ serverState, isStarting, onStartServer, 
       const res = await fetch(`/api/v1/server/files?pid=${serverState.pid}&path=${filename}`);
       const data = await res.json();
       if (data.success) {
-        setCode(data.content);
+        setFileContent(data.content);
       } else {
-        setCode(`// Failed to load file: ${data.error}`);
+        setFileContent(`// Failed to load file: ${data.error}`);
       }
     } catch (err) {
-      setCode(`// Network error loading file`);
+      setFileContent(`// Network error loading file`);
     }
   };
 
   const handleBackToGenerated = () => {
     setViewingFile(false);
     setSelectedFile(null);
-    setCode(lastGeneratedCodeRef.current);
+    setFileContent(null);
   };
-
-  // Regenerate code when graph changes (only if not dirty and NOT viewing a file)
-  useEffect(() => {
-    if (!isDirty && !viewingFile) {
-      const graph = { nodes, edges, selectedNodeId: null, selectedEdgeId: null };
-      const generated = graphToCode(graph);
-      setCode(generated);
-      lastGeneratedCodeRef.current = generated;
-    }
-  }, [nodes, edges, isDirty, viewingFile]);
 
   // Handle editor changes
   const handleEditorChange = useCallback((value: string | undefined) => {
-    if (viewingFile || !value) return; // Read-only when viewing server files
-    setCode(value);
+    if (viewingFile || value === undefined) return; // Read-only when viewing server files
     
-    // Check if the code differs from the last generated code
-    if (value !== lastGeneratedCodeRef.current) {
-      setIsDirty(true);
+    // If value matches generated, clear toggle (not dirty)
+    if (value === generatedCode) {
+        setUserCode(null);
+    } else {
+        setUserCode(value);
     }
-  }, [viewingFile]);
+  }, [viewingFile, generatedCode]);
 
   // Apply code changes back to graph
   const handleApplyChanges = useCallback(() => {
-    if (!isCodeStructureValid(code)) {
+    const codeToApply = userCode ?? generatedCode;
+    if (!isCodeStructureValid(codeToApply)) {
       alert('Code structure is invalid. Ensure node markers are preserved.');
       return;
     }
 
-    const updates = parseCodeToNodeUpdates(code);
+    const updates = parseCodeToNodeUpdates(codeToApply);
     for (const update of updates) {
       updateNodeConfig(update.nodeId, { customCode: update.customCode });
     }
     
-    // Regenerate code to ensure consistency
-    const graph = { nodes, edges, selectedNodeId: null, selectedEdgeId: null };
-    const generated = graphToCode(graph);
-    setCode(generated);
-    lastGeneratedCodeRef.current = generated;
-    setIsDirty(false);
-  }, [code, nodes, edges, updateNodeConfig]);
+    // After applying, the nodes will update, which updates generatedCode.
+    // We want to reset userCode so it matches the new generatedCode.
+    setUserCode(null);
+  }, [userCode, generatedCode, updateNodeConfig]);
 
   // Discard changes and regenerate
   const handleDiscardChanges = useCallback(() => {
-    const graph = { nodes, edges, selectedNodeId: null, selectedEdgeId: null };
-    const generated = graphToCode(graph);
-    setCode(generated);
-    lastGeneratedCodeRef.current = generated;
-    setIsDirty(false);
-  }, [nodes, edges]);
+    setUserCode(null);
+  }, []);
 
   return (
     <div className="flex-1 flex flex-row bg-slate-900 h-full overflow-hidden">
@@ -263,7 +260,7 @@ export default function GraphCodeView({ serverState, isStarting, onStartServer, 
             height="100%"
             defaultLanguage="typescript"
             theme="vs-dark"
-            value={code}
+            value={displayCode}
             onChange={handleEditorChange}
             options={{
               minimap: { enabled: false },

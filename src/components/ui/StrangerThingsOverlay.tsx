@@ -6,22 +6,23 @@ import { motion } from "framer-motion";
 
 export function StrangerThingsOverlay() {
     const { theme } = useTheme();
+    const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, duration: number, delay: number}>>([]);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        // Generate random particles only on client mount
+        const newParticles = Array.from({ length: 20 }).map((_, i) => ({
+            id: i,
+            x: Math.random() * 100,
+            y: Math.random() * 100,
+            duration: 10 + Math.random() * 20,
+            delay: Math.random() * 5,
+        }));
+        setParticles(newParticles);
     }, []);
 
     if (!mounted || theme !== "stranger") return null;
-
-    // Generate some random particles
-    const particles = Array.from({ length: 20 }).map((_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        duration: 10 + Math.random() * 20,
-        delay: Math.random() * 5,
-    }));
 
     return (
         <div className="fixed inset-0 pointer-events-none z-30 overflow-hidden">
@@ -43,7 +44,7 @@ export function StrangerThingsOverlay() {
                     }}
                     animate={{
                         y: "-10vh",
-                        x: `${p.x + (Math.random() * 10 - 5)}vw`, // Drift slightly
+                        x: `${p.x + (Math.sin(p.id) * 5)}vw`, // Drift slightly (deterministic)
                         opacity: [0, 0.8, 0]
                     }}
                     transition={{
