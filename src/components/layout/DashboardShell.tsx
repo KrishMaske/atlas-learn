@@ -52,7 +52,6 @@ function Sidebar({ theme, isCollapsed, toggleSidebar }: { theme: string | undefi
 
     const links = [
         { icon: Grid, label: "Sandbox", href: "/sandbox" },
-        { icon: BookOpen, label: "Tutorial", href: "/tutorial" },
         { icon: Settings, label: "Settings", href: "/settings" },
     ];
 

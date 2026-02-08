@@ -81,14 +81,11 @@ interface NodePaletteProps {
 }
 
 const CATEGORY_ORDER: NodeCategory[] = [
-  'Traffic',
-  'Networking',
+  'Context',
   'APIs',
-  'Caching',
-  'Storage',
-  'Compute',
-  'Big Data',
-  'Custom',
+  'Data',
+  'Integrations',
+  'Logic',
 ];
 
 export default function NodePalette({ onDragStart }: NodePaletteProps) {
@@ -107,7 +104,7 @@ export default function NodePalette({ onDragStart }: NodePaletteProps) {
             category={cat}
             types={NODE_CATEGORIES[cat]}
             onDragStart={onDragStart}
-            defaultOpen={['Traffic', 'Networking', 'APIs'].includes(cat)}
+            defaultOpen={['Context', 'APIs'].includes(cat)}
           />
         ))}
       </div>

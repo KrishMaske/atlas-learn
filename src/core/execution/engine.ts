@@ -40,44 +40,44 @@ export class ExecutionEngine {
       // 1. Execute logic based on type
       let output = input;
 
-      if (node.config.customCode) {
+      if ((node.config as any).code || (node.config as any).customCode) {
         // SECURITY: Disable arbitrary code execution using new Function
         // In a real environment, this should be run in a sandboxed isolation (e.g., vm2, isolated-vm)
         // or disabled entirely. For this local tool, we disable it to be safe per user request.
         this.log(`[WARN] Custom code execution is disabled for node ${node.label}`);
         output = { ...input, _warning: 'Custom code execution is disabled for security' };
       } else {
-          // Default behaviors if no custom code
-          switch (node.type) {
-            case 'API_GATEWAY':
-            case 'REST_API':
-                // Pass through
-                break;
-            case 'CUSTOM_LOGIC':
-                // Should have had custom code, but if not:
-                output = { ...input, processedBy: node.id };
-                break;
-            default:
-                output = { ...input, processedBy: node.id };
-          }
+        // Default behaviors if no custom code
+        switch (node.type) {
+          case 'REST_API':
+          case 'GRAPHQL_API':
+            // Pass through
+            break;
+          case 'FUNCTION':
+            // Should have had custom code (handled above), but if not:
+            output = { ...input, processedBy: node.id };
+            break;
+          default:
+            output = { ...input, processedBy: node.id };
+        }
       }
 
       // 2. Route to downstream
       const edges = this.context.graph.edges.filter(e => e.sourceId === nodeId);
       if (edges.length > 0) {
-          // Concurrent execution for branching? Or race?
-          // For now, let's take the first one or execute all side-effects but return first?
-          // Simple model: Single path or parallel. Let's do parallel execution for all outputs
-          // But return value is... complex. Let's return array of results if multiple.
-          
-          if (edges.length === 1) {
-              const targetId = edges[0].targetId;
-              output = await this.executeNode(targetId, output);
-          } else {
-               // Branching
-               const results = await Promise.all(edges.map(e => this.executeNode(e.targetId, output)));
-               output = results; // Aggregate
-          }
+        // Concurrent execution for branching? Or race?
+        // For now, let's take the first one or execute all side-effects but return first?
+        // Simple model: Single path or parallel. Let's do parallel execution for all outputs
+        // But return value is... complex. Let's return array of results if multiple.
+
+        if (edges.length === 1) {
+          const targetId = edges[0].targetId;
+          output = await this.executeNode(targetId, output);
+        } else {
+          // Branching
+          const results = await Promise.all(edges.map(e => this.executeNode(e.targetId, output)));
+          output = results; // Aggregate
+        }
       }
 
       const duration = performance.now() - startTime;

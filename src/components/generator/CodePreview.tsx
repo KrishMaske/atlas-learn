@@ -9,6 +9,103 @@ import { generateCode, GeneratedFile } from '@/core/generator/codegen';
 // CodePreview — tabbed code viewer for generated backend output
 // =============================================================================
 
+// Helper to build tree from paths
+type TreeNode = {
+  name: string;
+  path?: string; // Only files have a path
+  children: Record<string, TreeNode>;
+};
+
+function buildTree(files: GeneratedFile[]): TreeNode {
+  const root: TreeNode = { name: 'root', children: {} };
+  
+  for (const file of files) {
+    const parts = file.path.split('/');
+    let current = root;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isFile = i === parts.length - 1;
+      
+      if (!current.children[part]) {
+        current.children[part] = {
+          name: part,
+          path: isFile ? file.path : undefined,
+          children: {}
+        };
+      }
+      current = current.children[part];
+    }
+  }
+  return root;
+}
+
+function FileTreeNode({ 
+  node, 
+  depth, 
+  selected, 
+  onSelect 
+}: { 
+  node: TreeNode; 
+  depth: number;
+  selected: string;
+  onSelect: (path: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const isFile = !!node.path;
+  const sortedChildren = useMemo(() => {
+     return Object.values(node.children).sort((a, b) => {
+         // Folders first, then files
+         const aIsFolder = !a.path;
+         const bIsFolder = !b.path;
+         if (aIsFolder && !bIsFolder) return -1;
+         if (!aIsFolder && bIsFolder) return 1;
+         return a.name.localeCompare(b.name);
+     });
+  }, [node.children]);
+
+  if (isFile) {
+    return (
+      <button
+        onClick={() => onSelect(node.path!)}
+        className={`block w-full text-left px-3 py-1 truncate flex items-center gap-2 hover:bg-slate-800/60 ${
+          selected === node.path ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400'
+        }`}
+        style={{ paddingLeft: `${depth * 12 + 12}px` }}
+      >
+        <span>📄</span>
+        <span>{node.name}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full text-left px-3 py-1 text-slate-300 hover:bg-slate-800/60 flex items-center gap-1"
+        style={{ paddingLeft: `${depth * 12 + 12}px` }}
+      >
+        <span className="text-[10px] w-3 scale-75 inline-block">{collapsed ? '▶' : '▼'}</span>
+        <span className="text-yellow-500/80">📁</span>
+        <span>{node.name}</span>
+      </button>
+      {!collapsed && (
+        <div>
+          {sortedChildren.map(child => (
+            <FileTreeNode 
+              key={child.name} 
+              node={child} 
+              depth={depth + 1} 
+              selected={selected} 
+              onSelect={onSelect} 
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FileTree({
   files,
   selected,
@@ -18,68 +115,25 @@ function FileTree({
   selected: string;
   onSelect: (path: string) => void;
 }) {
-  // Group files by top-level directory
-  const tree = useMemo(() => {
-    const dirs: Record<string, GeneratedFile[]> = {};
-    const root: GeneratedFile[] = [];
-    for (const f of files) {
-      const parts = f.path.split('/');
-      if (parts.length > 1) {
-        const dir = parts[0];
-        (dirs[dir] ??= []).push(f);
-      } else {
-        root.push(f);
-      }
-    }
-    return { dirs, root };
-  }, [files]);
-
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const root = useMemo(() => buildTree(files), [files]);
+  const children = useMemo(() => Object.values(root.children).sort((a, b) => {
+       const aIsFolder = !a.path;
+       const bIsFolder = !b.path;
+       if (aIsFolder && !bIsFolder) return -1;
+       if (!aIsFolder && bIsFolder) return 1;
+       return a.name.localeCompare(b.name);
+  }), [root]);
 
   return (
-    <div className="w-52 flex-shrink-0 bg-slate-900/60 border-r border-slate-700/50 overflow-y-auto text-xs">
-      {/* Root files */}
-      {tree.root.map((f) => (
-        <button
-          key={f.path}
-          onClick={() => onSelect(f.path)}
-          className={`block w-full text-left px-3 py-1.5 truncate ${
-            selected === f.path
-              ? 'bg-blue-500/20 text-blue-300'
-              : 'text-slate-400 hover:bg-slate-800/60'
-          }`}
-        >
-          📄 {f.path}
-        </button>
-      ))}
-
-      {/* Directories */}
-      {Object.entries(tree.dirs).map(([dir, dirFiles]) => (
-        <div key={dir}>
-          <button
-            onClick={() =>
-              setCollapsed((p) => ({ ...p, [dir]: !p[dir] }))
-            }
-            className="w-full text-left px-3 py-1.5 text-slate-300 hover:bg-slate-800/60 flex items-center gap-1"
-          >
-            <span className="text-[10px]">{collapsed[dir] ? '▶' : '▼'}</span>
-            📁 {dir}
-          </button>
-          {!collapsed[dir] &&
-            dirFiles.map((f) => (
-              <button
-                key={f.path}
-                onClick={() => onSelect(f.path)}
-                className={`block w-full text-left pl-6 pr-3 py-1.5 truncate ${
-                  selected === f.path
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'text-slate-400 hover:bg-slate-800/60'
-                }`}
-              >
-                📄 {f.path.split('/').pop()}
-              </button>
-            ))}
-        </div>
+    <div className="w-52 flex-shrink-0 bg-slate-900/60 border-r border-slate-700/50 overflow-y-auto text-xs py-2">
+      {children.map(child => (
+        <FileTreeNode 
+          key={child.name} 
+          node={child} 
+          depth={0} 
+          selected={selected} 
+          onSelect={onSelect} 
+        />
       ))}
     </div>
   );

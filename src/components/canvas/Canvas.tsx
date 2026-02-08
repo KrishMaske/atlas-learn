@@ -20,15 +20,13 @@ function snapToGrid(value: number): number {
 
 interface CanvasProps {
   draggedNodeType: NodeType | null;
-  simulationMetrics?: Map<string, { utilization: number; requestCount: number }>;
-  isSimulating?: boolean;
+  isServerRunning?: boolean;
 }
 
 // Replace entire Canvas functional component logic
 export default function Canvas({
   draggedNodeType,
-  simulationMetrics,
-  isSimulating = false,
+  isServerRunning = false,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -128,12 +126,6 @@ export default function Canvas({
       // Handle connection drop
       if (draggedEdge) {
         setDraggedEdge(null);
-        // Ensure we check if we dropped ON a node (handled by mouseUp on NodeRenderer ideally,
-        // but since we have global mouseup here, we rely on the fact that Node's onMouseUp
-        // propagation might ideally handle it, OR we do hit testing.
-        // EASIER WAY: NodeRenderer's onMouseUp fires BEFORE window's onMouseUp or bubble up.
-        // Actually, we can use document.elementFromPoint if we really needed to,
-        // but let's try a simpler approach: NodeRenderer onMouseUp handles the 'connect' action.
       }
     },
     [draggedEdge]
@@ -179,11 +171,6 @@ export default function Canvas({
       e.stopPropagation();
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return;
-
-      // Check if clicking on a "handle" or special zone? 
-      // For now, let's say Shift+Drag or dragging from a specific port triggers connection?
-      // User asked for "Drag and create arrows" typically meaning drag from a handle.
-      // We will assume the NodeRenderer calls a specific prop for connection start.
 
       const canvas = screenToCanvas(e.clientX, e.clientY);
       setDraggingNodeId(nodeId);
@@ -272,28 +259,17 @@ export default function Canvas({
         {/* SVG layer for edges */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
           {edges.map((edge) => {
-            const metrics = simulationMetrics?.get(edge.sourceId);
             return (
               <g key={edge.id} onClick={(e) => { e.stopPropagation(); selectEdge(edge.id); }} className="cursor-pointer pointer-events-auto">
                 <EdgeRenderer
                   edge={edge}
                   nodes={nodes}
-                  isActive={isSimulating && !!metrics}
-                  requestCount={metrics?.requestCount || 0}
-                // We can pass isSelected prop if EdgeRenderer supports it
+                  isActive={isServerRunning}
                 />
                 {/* Highlight for selection */}
                 {selectedEdgeId === edge.id && (
                   <path
-                    d={`M ${nodes.find(n => n.id === edge.sourceId)?.position.x! + 64} ${nodes.find(n => n.id === edge.sourceId)?.position.y} L ${nodes.find(n => n.id === edge.targetId)?.position.x! - 64} ${nodes.find(n => n.id === edge.targetId)?.position.y}`} // Approximate path for selection highlight (Curve logic is inside EdgeRenderer, ideally we refactor exposure)
-                    // Actually, EdgeRenderer handles curved path calculation. Let's trust EdgeRenderer visual update for selection if we passed it down, 
-                    // but since we aren't modifying EdgeRenderer prop signature in this step, let's assume we reuse the component or add a simple overlay?
-                    // Better: We should have updated EdgeRenderer props to accept 'isSelected'. 
-                    // Since I can't change it here without updating the component file again, I'll rely on global store or update EdgeRenderer in next step if needed.
-                    // Wait, I updated EdgeRenderer in previous step? No, I just viewed it. I missed updating EdgeRenderer to accept isSelected.
-                    // Correcting plan: I will update EdgeRenderer props in a subsequent call if I haven't already. 
-                    // Actually, looking at my history, I only viewed it. I need to update it.
-                    // For now, I'll allow clicking it to select it.
+                    d={`M ${nodes.find(n => n.id === edge.sourceId)?.position.x! + 64} ${nodes.find(n => n.id === edge.sourceId)?.position.y} L ${nodes.find(n => n.id === edge.targetId)?.position.x! - 64} ${nodes.find(n => n.id === edge.targetId)?.position.y}`} 
                     stroke="rgba(59, 130, 246, 0.5)"
                     strokeWidth="10"
                     fill="none"
@@ -325,16 +301,14 @@ export default function Canvas({
 
         {/* Nodes */}
         {nodes.map((node) => {
-          const metrics = simulationMetrics?.get(node.id);
           return (
             <div key={node.id} className="absolute" style={{ left: 0, top: 0 }}>
               <NodeRenderer
                 node={node}
                 isSelected={selectedNodeId === node.id}
                 onSelect={() => selectNode(node.id)}
-                onDoubleClick={() => { }} // Double click no longer needed for connect? Keep for safety.
+                onDoubleClick={() => { }} 
                 onDragStart={(e) => handleNodeDragStart(node.id, e)}
-                utilization={metrics?.utilization || 0}
               />
 
               {/* Connection Handles (Overlay on top of NodeRenderer) */}

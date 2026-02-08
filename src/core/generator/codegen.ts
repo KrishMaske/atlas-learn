@@ -3,42 +3,20 @@
 // =============================================================================
 // Transforms the IR into real, usable TypeScript backend code.
 // Target: Node.js + Express + TypeScript
-//
-// Generated structure:
-//   <project>/
-//     package.json
-//     tsconfig.json
-//     docker-compose.yml
-//     src/
-//       index.ts              ← entry point
-//       services/
-//         <slug>.ts           ← one file per service
-//       shared/
-//         types.ts
-//         logger.ts
 // =============================================================================
 
 import {
   NodeType,
   RestApiConfig,
   GraphqlApiConfig,
-  AuthServiceConfig,
-  ApiConfig,
-  ApiGatewayConfig,
-  LoadBalancerConfig,
-  RateLimiterConfig,
-  CacheConfig,
   RedisCacheConfig,
-  DatabaseConfig,
   SqlDatabaseConfig,
   NosqlDatabaseConfig,
   ObjectStorageConfig,
-  QueueConfig,
-  WorkerConfig,
-  StreamProcessorConfig,
-  BatchProcessorConfig,
-  AnalyticsSinkConfig,
-  CustomLogicConfig,
+  SupabaseConfig,
+  FirebaseConfig,
+  GithubConfig,
+  FunctionConfig,
 } from '@/core/types';
 
 import { IR, IRService, IRConnection } from './ir';
@@ -145,22 +123,16 @@ function getPackageVersion(pkg: string): string {
   const versions: Record<string, string> = {
     express: '^4.18.0',
     cors: '^2.8.0',
-    helmet: '^7.0.0',
-    'express-rate-limit': '^7.0.0',
-    'http-proxy-middleware': '^2.0.0',
     '@apollo/server': '^4.9.0',
     graphql: '^16.8.0',
-    jsonwebtoken: '^9.0.0',
-    bcryptjs: '^2.4.0',
-    'node-cache': '^5.1.0',
     ioredis: '^5.3.0',
     pg: '^8.11.0',
     '@prisma/client': '^5.0.0',
     mongodb: '^6.0.0',
     '@aws-sdk/client-s3': '^3.400.0',
-    bullmq: '^4.0.0',
-    kafkajs: '^2.2.0',
-    'node-cron': '^3.0.0',
+    '@supabase/supabase-js': '^2.38.0',
+    'firebase-admin': '^11.11.0',
+    '@octokit/rest': '^20.0.0',
   };
   return versions[pkg] ?? '*';
 }
@@ -277,46 +249,32 @@ function generateServiceFile(service: IRService, ir: IR): GeneratedFile {
 
 function generateServiceCode(svc: IRService, ir: IR): string {
   // Check for custom code override
-  if (svc.config.customCode) {
-      return generateCustomServiceCode(svc, ir, svc.config.customCode);
+  // Note: ContextConfig doesn't have customCode, but IR excludes Context nodes from services
+  if ('customCode' in svc.config && svc.config.customCode) {
+    return generateCustomServiceCode(svc, ir, svc.config.customCode);
   }
 
   switch (svc.nodeType) {
-    case 'LOAD_BALANCER':
-      return genLoadBalancer(svc, ir);
-    case 'API_GATEWAY':
-      return genApiGateway(svc, ir);
-    case 'RATE_LIMITER':
-      return genRateLimiter(svc, ir);
     case 'REST_API':
-    case 'API':
       return genRestApi(svc, ir);
     case 'GRAPHQL_API':
       return genGraphqlApi(svc, ir);
-    case 'AUTH_SERVICE':
-      return genAuthService(svc, ir);
-    case 'CACHE':
     case 'REDIS_CACHE':
-      return genCacheService(svc, ir);
-    case 'DATABASE':
+      return genRedisCache(svc, ir);
     case 'SQL_DATABASE':
       return genSqlDatabase(svc, ir);
     case 'NOSQL_DATABASE':
       return genNosqlDatabase(svc, ir);
     case 'OBJECT_STORAGE':
       return genObjectStorage(svc, ir);
-    case 'QUEUE':
-      return genQueue(svc, ir);
-    case 'WORKER':
-      return genWorker(svc, ir);
-    case 'STREAM_PROCESSOR':
-      return genStreamProcessor(svc, ir);
-    case 'BATCH_PROCESSOR':
-      return genBatchProcessor(svc, ir);
-    case 'ANALYTICS_SINK':
-      return genAnalyticsSink(svc, ir);
-    case 'CUSTOM_LOGIC':
-      return genCustomLogic(svc, ir);
+    case 'SUPABASE':
+      return genSupabase(svc, ir);
+    case 'FIREBASE':
+      return genFirebase(svc, ir);
+    case 'GITHUB':
+      return genGithub(svc, ir);
+    case 'FUNCTION':
+      return genFunction(svc, ir);
     default:
       return genGenericService(svc, ir);
   }
@@ -324,7 +282,7 @@ function generateServiceCode(svc: IRService, ir: IR): string {
 
 // Helper to wrap custom code in standard service boilerplate
 function generateCustomServiceCode(svc: IRService, ir: IR, customCode: string): string {
-    return `${header(svc)}
+  return `${header(svc)}
 import express from 'express';
 import cors from 'cors';
 import { log } from '../shared/logger';
@@ -337,25 +295,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'healthy', service: '${svc.slug}' });
 });
 
-// User implementation
-const userLogic = async (input: any, context: any) => {
-    // Injected custom code
-    // The user writes: return input;
-    // We wrap it in an async IIFE or function body
-    /* 
-       Available vars: 
-       - input: request body or data
-       - context: { log, ... }
-    */
-    try {
-        ${customCode}
-    } catch (err: any) {
-        throw new Error(err.message);
-    }
-};
-
 app.all('*', async (req, res) => {
-    // If health check, skip (handled above, but express matches order)
     if (req.path === '/health') return;
 
     log('${svc.slug}', \`Processing \${req.method} \${req.path}\`);
@@ -373,25 +313,6 @@ app.all('*', async (req, res) => {
             error: (...args: any[]) => log('${svc.slug}', 'ERROR:', args.join(' '))
         };
 
-        // Execute user function
-        // Note: For real code generation, we just dump the code. 
-        // We assume the user wrote valid function body code.
-        // But to make it runnable TS, we need to wrap it carefully.
-        // Simplest: We put the code inside the route handler.
-        
-        // Dynamic evaluation in generated code? 
-        // Better: We treat 'customCode' as the BODY of the handler.
-        
-        // Let's redefine userLogic to be inline to access 'res' if needed?
-        // Or simpler: User code returns the response DATA.
-        
-        /* 
-           User code example:
-           console.log('Got', input);
-           return { success: true };
-        */
-        
-        // We need to wrap it in a function invocation
         const fn = new Function('input', 'console', \`
             return (async () => {
                 ${customCode}
@@ -452,179 +373,10 @@ function header(svc: IRService): string {
 // Node-type Specific Generators
 // -----------------------------------------------------------------------------
 
-function genLoadBalancer(svc: IRService, ir: IR): string {
-  const config = svc.config as LoadBalancerConfig;
-  const targets = svc.downstreamIds
-    .map((id) => ir.services.find((s) => s.id === id))
-    .filter(Boolean);
-
-  return `${header(svc)}
-import express from 'express';
-import cors from 'cors';
-import { log } from '../shared/logger';
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Downstream targets
-const targets = [
-${targets.map((t) => `  'http://localhost:${t!.port}',`).join('\n')}
-];
-
-let currentIndex = 0;
-
-// Load balancing algorithm: ${config.algorithm}
-function getNextTarget(): string {
-${config.algorithm === 'ROUND_ROBIN' ? `  const target = targets[currentIndex % targets.length];
-  currentIndex++;
-  return target;` : config.algorithm === 'RANDOM' ? `  return targets[Math.floor(Math.random() * targets.length)];` : `  // ${config.algorithm} — simplified to round-robin
-  const target = targets[currentIndex % targets.length];
-  currentIndex++;
-  return target;`}
-}
-
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', algorithm: '${config.algorithm}' });
-});
-
-// Forward all requests to downstream
-app.all('*', async (req, res) => {
-  const target = getNextTarget();
-  log('${svc.slug}', \`Forwarding \${req.method} \${req.path} → \${target}\`);
-  try {
-    const response = await fetch(\`\${target}\${req.path}\`, {
-      method: req.method,
-      headers: { 'Content-Type': 'application/json' },
-      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (err) {
-    log('${svc.slug}', 'Downstream error', err);
-    res.status(502).json({ error: 'Bad Gateway' });
-  }
-});
-
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Load Balancer listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
-function genApiGateway(svc: IRService, ir: IR): string {
-  const config = svc.config as ApiGatewayConfig;
-  return `${header(svc)}
-import express from 'express';
-import cors from 'cors';
-import { log } from '../shared/logger';
-
-const app = express();
-${config.corsEnabled ? "app.use(cors());" : '// CORS disabled'}
-app.use(express.json());
-
-${config.rateLimitEnabled ? `// Rate limiting
-import rateLimit from 'express-rate-limit';
-const limiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 100,
-  message: { error: 'Too many requests' },
-});
-app.use(limiter);` : '// Rate limiting disabled'}
-
-${config.authEnabled ? `// Auth middleware
-function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  // In production, verify JWT here
-  next();
-}
-app.use(authMiddleware);` : '// Auth disabled'}
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}' });
-});
-
-// Route all API requests to downstream services
-app.all('/api/*', async (req, res) => {
-  log('${svc.slug}', \`Gateway: \${req.method} \${req.path}\`);
-  try {
-    // Forward to first downstream service
-    ${svc.downstreamIds.length > 0 ? `const downstream = 'http://localhost:${ir.services.find((s) => s.id === svc.downstreamIds[0])?.port ?? 3001}';
-    const response = await fetch(\`\${downstream}\${req.path}\`, {
-      method: req.method,
-      headers: { 'Content-Type': 'application/json' },
-      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);` : `res.json({ message: 'No downstream services configured' });`}
-  } catch (err) {
-    log('${svc.slug}', 'Gateway error', err);
-    res.status(502).json({ error: 'Bad Gateway' });
-  }
-});
-
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'API Gateway listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
-function genRateLimiter(svc: IRService, ir: IR): string {
-  const config = svc.config as RateLimiterConfig;
-  return `${header(svc)}
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import { log } from '../shared/logger';
-
-const app = express();
-app.use(express.json());
-
-const limiter = rateLimit({
-  windowMs: ${config.windowMs},
-  max: ${config.maxRequests},
-  message: { error: 'Rate limit exceeded' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use(limiter);
-
-app.all('*', async (req, res) => {
-  log('${svc.slug}', \`Passed rate limit: \${req.method} \${req.path}\`);
-  ${svc.downstreamIds.length > 0 ? `try {
-    const downstream = 'http://localhost:${ir.services.find((s) => s.id === svc.downstreamIds[0])?.port ?? 3001}';
-    const response = await fetch(\`\${downstream}\${req.path}\`, {
-      method: req.method,
-      headers: { 'Content-Type': 'application/json' },
-      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (err) {
-    res.status(502).json({ error: 'Downstream error' });
-  }` : `res.json({ status: 'ok' });`}
-});
-
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Rate Limiter listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
 function genRestApi(svc: IRService, ir: IR): string {
-  const config = svc.config as (RestApiConfig | ApiConfig);
-  const path = 'path' in config ? config.path : '/api/resource';
-  const method = 'method' in config ? config.method.toLowerCase() : 'get';
+  const config = svc.config as RestApiConfig;
+  const path = config.path || '/api/resource';
+  const method = config.method?.toLowerCase() || 'get';
 
   return `${header(svc)}
 import express from 'express';
@@ -645,17 +397,17 @@ app.${method}('${path}', async (req, res) => {
   try {
     ${svc.downstreamIds.length > 0 ? `// Call downstream service(s)
     ${svc.downstreamIds.map((dsId) => {
-      const ds = ir.services.find((s) => s.id === dsId);
-      return ds ? `const ${ds.slug}Result = await fetch('http://localhost:${ds.port}/process', {
+    const ds = ir.services.find((s) => s.id === dsId);
+    return ds ? `const ${ds.slug}Result = await fetch('http://localhost:${ds.port}/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body || {}),
     }).then(r => r.json());` : '';
-    }).join('\n    ')}
+  }).join('\n    ')}
     res.json({ success: true, data: { ${svc.downstreamIds.map((dsId) => {
-      const ds = ir.services.find((s) => s.id === dsId);
-      return ds ? `${ds.slug}: ${ds.slug}Result` : '';
-    }).filter(Boolean).join(', ')} } });` : `// No downstream services — return directly
+    const ds = ir.services.find((s) => s.id === dsId);
+    return ds ? `${ds.slug}: ${ds.slug}Result` : '';
+  }).filter(Boolean).join(', ')} } });` : `// No downstream services — return directly
     res.json({ success: true, data: { message: '${svc.name} processed request' } });`}
   } catch (err) {
     log('${svc.slug}', 'Error processing request', err);
@@ -668,14 +420,14 @@ app.post('/process', async (req, res) => {
   log('${svc.slug}', 'Processing upstream request');
   ${svc.downstreamIds.length > 0 ? `try {
     ${svc.downstreamIds.map((dsId) => {
-      const ds = ir.services.find((s) => s.id === dsId);
-      return ds ? `const result = await fetch('http://localhost:${ds.port}/process', {
+    const ds = ir.services.find((s) => s.id === dsId);
+    return ds ? `const result = await fetch('http://localhost:${ds.port}/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body),
     }).then(r => r.json());
     res.json(result);` : '';
-    }).join('\n    ')}
+  }).join('\n    ')}
   } catch (err) {
     res.status(500).json({ error: 'Downstream call failed' });
   }` : `res.json({ success: true, data: req.body });`}
@@ -740,83 +492,9 @@ startServer().catch((err) => {
 `;
 }
 
-function genAuthService(svc: IRService, _ir: IR): string {
-  const config = svc.config as AuthServiceConfig;
+function genRedisCache(svc: IRService, _ir: IR): string {
+  const config = svc.config as RedisCacheConfig;
   return `${header(svc)}
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import { log } from '../shared/logger';
-
-const app = express();
-app.use(express.json());
-
-const JWT_SECRET = process.env.JWT_SECRET || 'atlas-dev-secret-change-in-production';
-const TOKEN_TTL = ${config.tokenTTL}; // seconds
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}' });
-});
-
-// Issue a token
-app.post('/auth/token', (req, res) => {
-  const { username, password } = req.body;
-  log('${svc.slug}', \`Token request for user: \${username}\`);
-
-  // In production, validate credentials against a user store
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
-
-  const token = jwt.sign(
-    { sub: username, iat: Math.floor(Date.now() / 1000) },
-    JWT_SECRET,
-    { expiresIn: TOKEN_TTL },
-  );
-
-  res.json({ token, expiresIn: TOKEN_TTL });
-});
-
-// Verify a token
-app.post('/auth/verify', (req, res) => {
-  const { token } = req.body;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    res.json({ valid: true, decoded });
-  } catch {
-    res.status(401).json({ valid: false, error: 'Invalid or expired token' });
-  }
-});
-
-// Middleware-style process endpoint for upstream services
-app.post('/process', (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No authorization header' });
-  }
-  try {
-    const token = authHeader.replace('Bearer ', '');
-    const decoded = jwt.verify(token, JWT_SECRET);
-    res.json({ authenticated: true, user: decoded, data: req.body });
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
-
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Auth Service (${config.algorithm}) listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
-function genCacheService(svc: IRService, ir: IR): string {
-  const config = svc.config as (CacheConfig | RedisCacheConfig);
-  const isRedis = svc.nodeType === 'REDIS_CACHE';
-
-  if (isRedis) {
-    const rc = config as RedisCacheConfig;
-    return `${header(svc)}
 import express from 'express';
 import Redis from 'ioredis';
 import { log } from '../shared/logger';
@@ -824,97 +502,34 @@ import { log } from '../shared/logger';
 const app = express();
 app.use(express.json());
 
+// In a real generation, we'd use environment variables or user-supplied connection strings
+// For now, we simulate a mock or assume localhost
 const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: 3,
+  lazyConnect: true, // Don't crash if Redis isn't running
 });
-
-const DEFAULT_TTL = ${rc.ttl}; // seconds
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}', evictionPolicy: '${rc.evictionPolicy}' });
+  res.json({ status: 'healthy', service: '${svc.slug}' });
 });
 
-// Cache middleware for upstream services
-app.post('/process', async (req, res) => {
-  const cacheKey = JSON.stringify(req.body);
-  const keyHash = Buffer.from(cacheKey).toString('base64').slice(0, 32);
-
-  // Check cache
-  const cached = await redis.get(keyHash);
-  if (cached) {
-    log('${svc.slug}', 'Cache HIT');
-    return res.json({ fromCache: true, data: JSON.parse(cached) });
-  }
-
-  log('${svc.slug}', 'Cache MISS');
-  ${svc.downstreamIds.length > 0 ? `// Forward to downstream
-  try {
-    const downstream = 'http://localhost:${ir.services.find((s) => s.id === svc.downstreamIds[0])?.port ?? 3001}';
-    const result = await fetch(\`\${downstream}/process\`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
-    }).then(r => r.json());
-
-    // Store in cache
-    await redis.setex(keyHash, DEFAULT_TTL, JSON.stringify(result));
-    res.json({ fromCache: false, data: result });
-  } catch (err) {
-    log('${svc.slug}', 'Downstream error', err);
-    res.status(502).json({ error: 'Cache miss and downstream failed' });
-  }` : `res.json({ fromCache: false, data: req.body });`}
+app.post('/cache/set', async (req, res) => {
+  const { key, value } = req.body;
+  await redis.set(key, value, 'EX', ${config.ttl});
+  res.json({ success: true });
 });
 
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Redis Cache listening on port ${svc.port}');
-});
-
-export default app;
-`;
-  }
-
-  // Simple in-memory cache
-  return `${header(svc)}
-import express from 'express';
-import NodeCache from 'node-cache';
-import { log } from '../shared/logger';
-
-const app = express();
-app.use(express.json());
-
-const cache = new NodeCache({ stdTTL: ${config.ttl}, checkperiod: 60 });
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}', keys: cache.keys().length });
+app.get('/cache/get/:key', async (req, res) => {
+  const value = await redis.get(req.params.key);
+  res.json({ value });
 });
 
 app.post('/process', async (req, res) => {
-  const keyHash = Buffer.from(JSON.stringify(req.body)).toString('base64').slice(0, 32);
-  const cached = cache.get(keyHash);
-  if (cached) {
-    log('${svc.slug}', 'Cache HIT');
-    return res.json({ fromCache: true, data: cached });
-  }
-
-  log('${svc.slug}', 'Cache MISS');
-  ${svc.downstreamIds.length > 0 ? `try {
-    const downstream = 'http://localhost:${ir.services.find((s) => s.id === svc.downstreamIds[0])?.port ?? 3001}';
-    const result = await fetch(\`\${downstream}/process\`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
-    }).then(r => r.json());
-    cache.set(keyHash, result);
-    res.json({ fromCache: false, data: result });
-  } catch (err) {
-    res.status(502).json({ error: 'Downstream failed' });
-  }` : `res.json({ fromCache: false, data: req.body });`}
+  // Passthrough or cache logic
+  res.json({ message: 'Redis Cache Service' });
 });
 
 app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Cache listening on port ${svc.port}');
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
 });
 
 export default app;
@@ -922,58 +537,38 @@ export default app;
 }
 
 function genSqlDatabase(svc: IRService, _ir: IR): string {
-  const config = svc.config as (SqlDatabaseConfig | DatabaseConfig);
-  const engine = 'engine' in config ? config.engine : 'POSTGRES';
-  const poolSize = 'poolSize' in config ? config.poolSize : 20;
-
+  const config = svc.config as SqlDatabaseConfig;
   return `${header(svc)}
 import express from 'express';
-import { Pool } from 'pg';
 import { log } from '../shared/logger';
+
+// Example: Using Prisma or PG
+// import { Client } from 'pg';
 
 const app = express();
 app.use(express.json());
 
-// Connection pool
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || '${svc.slug}',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  max: ${poolSize}, // pool size
+// Config
+// Engine: ${config.engine}
+// Pool Size: ${config.poolSize}
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', service: '${svc.slug}', engine: '${config.engine}' });
 });
 
-app.get('/health', async (_req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.json({ status: 'healthy', service: '${svc.slug}', engine: '${engine}' });
-  } catch {
-    res.status(503).json({ status: 'unhealthy' });
-  }
+// Mock query endpoint
+app.post('/query', (req, res) => {
+  const { sql } = req.body;
+  log('${svc.slug}', \`Executing SQL: \${sql}\`);
+  res.json({ rows: [], rowCount: 0, mock: true });
 });
 
-// Generic query endpoint
-app.post('/process', async (req, res) => {
-  log('${svc.slug}', 'Processing query');
-  try {
-    // In production, use parameterised queries
-    const { query, params } = req.body;
-    if (query) {
-      const result = await pool.query(query, params || []);
-      res.json({ success: true, rows: result.rows, rowCount: result.rowCount });
-    } else {
-      // Default: echo back (useful for testing connectivity)
-      res.json({ success: true, data: req.body });
-    }
-  } catch (err) {
-    log('${svc.slug}', 'Query error', err);
-    res.status(500).json({ error: 'Database query failed' });
-  }
+app.post('/process', (req, res) => {
+  res.json({ message: 'SQL Database Service' });
 });
 
 app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'SQL Database (${engine}) service listening on port ${svc.port}');
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
 });
 
 export default app;
@@ -984,57 +579,30 @@ function genNosqlDatabase(svc: IRService, _ir: IR): string {
   const config = svc.config as NosqlDatabaseConfig;
   return `${header(svc)}
 import express from 'express';
-import { MongoClient, Db } from 'mongodb';
 import { log } from '../shared/logger';
 
 const app = express();
 app.use(express.json());
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
-const DB_NAME = process.env.DB_NAME || '${svc.slug}';
-
-let db: Db;
-
-async function connectDB() {
-  const client = new MongoClient(MONGO_URI);
-  await client.connect();
-  db = client.db(DB_NAME);
-  log('${svc.slug}', \`Connected to MongoDB (${config.engine}), replicas: ${config.replicaCount}\`);
-}
+// Config
+// Engine: ${config.engine}
 
 app.get('/health', (_req, res) => {
-  res.json({ status: db ? 'healthy' : 'connecting', service: '${svc.slug}' });
+  res.json({ status: 'healthy', service: '${svc.slug}', engine: '${config.engine}' });
 });
 
-app.post('/process', async (req, res) => {
-  log('${svc.slug}', 'Processing document operation');
-  try {
-    const { collection, operation, data, filter } = req.body;
-    const col = db.collection(collection || 'default');
-
-    switch (operation) {
-      case 'insert':
-        const insertResult = await col.insertOne(data || {});
-        return res.json({ success: true, insertedId: insertResult.insertedId });
-      case 'find':
-        const docs = await col.find(filter || {}).limit(100).toArray();
-        return res.json({ success: true, data: docs });
-      default:
-        return res.json({ success: true, data: req.body });
-    }
-  } catch (err) {
-    log('${svc.slug}', 'DB error', err);
-    res.status(500).json({ error: 'Database operation failed' });
-  }
+// Mock query endpoint
+app.post('/document', (req, res) => {
+  log('${svc.slug}', \`Processing document request\`);
+  res.json({ success: true, mock: true });
 });
 
-connectDB().then(() => {
-  app.listen(${svc.port}, () => {
-    log('${svc.slug}', 'NoSQL Database service listening on port ${svc.port}');
-  });
-}).catch((err) => {
-  log('${svc.slug}', 'Failed to connect to MongoDB', err);
-  process.exit(1);
+app.post('/process', (req, res) => {
+  res.json({ message: 'NoSQL Database Service' });
+});
+
+app.listen(${svc.port}, () => {
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
 });
 
 export default app;
@@ -1045,373 +613,231 @@ function genObjectStorage(svc: IRService, _ir: IR): string {
   const config = svc.config as ObjectStorageConfig;
   return `${header(svc)}
 import express from 'express';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { log } from '../shared/logger';
 
 const app = express();
-app.use(express.json({ limit: '${config.maxObjectSizeMB}mb' }));
+app.use(express.json());
 
-const s3 = new S3Client({
-  region: '${config.region}',
-  // For local development with LocalStack / MinIO:
-  endpoint: process.env.S3_ENDPOINT || undefined,
-  forcePathStyle: true,
-});
-
-const BUCKET = process.env.S3_BUCKET || '${svc.slug}-bucket';
+// Config
+// Region: ${config.region}
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}', region: '${config.region}' });
+  res.json({ status: 'healthy', service: '${svc.slug}' });
+});
+
+app.post('/upload', (req, res) => {
+  log('${svc.slug}', \`File upload request\`);
+  res.json({ success: true, url: 'https://example.com/file.png' });
+});
+
+app.post('/process', (req, res) => {
+  res.json({ message: 'Object Storage Service' });
+});
+
+app.listen(${svc.port}, () => {
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
+});
+
+export default app;
+`;
+}
+
+function genSupabase(svc: IRService, _ir: IR): string {
+  const config = svc.config as SupabaseConfig;
+  return `${header(svc)}
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import { log } from '../shared/logger';
+
+const app = express();
+app.use(express.json());
+
+const SUPABASE_URL = process.env.SUPABASE_URL || '${config.url || "https://example.supabase.co"}';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '${config.key || "your-anon-key"}';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', service: '${svc.slug}', features: ${JSON.stringify(config.features)} });
 });
 
 app.post('/process', async (req, res) => {
-  log('${svc.slug}', 'Processing storage operation');
-  const { operation, key, data } = req.body;
+  // Example integration
+  log('${svc.slug}', 'Processing Supabase request');
+  res.json({ message: 'Supabase Integration Service' });
+});
 
-  try {
-    if (operation === 'put') {
-      await s3.send(new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: key || 'default-key',
-        Body: JSON.stringify(data),
-      }));
-      return res.json({ success: true, key });
-    } else if (operation === 'get') {
-      const obj = await s3.send(new GetObjectCommand({
-        Bucket: BUCKET,
-        Key: key || 'default-key',
-      }));
-      const body = await obj.Body?.transformToString();
-      return res.json({ success: true, data: body ? JSON.parse(body) : null });
+app.listen(${svc.port}, () => {
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
+});
+
+export default app;
+`;
+}
+
+function genFirebase(svc: IRService, _ir: IR): string {
+  const config = svc.config as FirebaseConfig;
+  return `${header(svc)}
+import express from 'express';
+import * as admin from 'firebase-admin';
+import { log } from '../shared/logger';
+
+const app = express();
+app.use(express.json());
+
+// Initialize Firebase Admin (requires credentials in environment)
+if (!admin.apps.length) {
+  // admin.initializeApp();
+  console.log('Firebase Admin initialized (mock)');
+}
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', service: '${svc.slug}', features: ${JSON.stringify(config.features)} });
+});
+
+app.post('/process', async (req, res) => {
+  log('${svc.slug}', 'Processing Firebase request');
+  res.json({ message: 'Firebase Integration Service' });
+});
+
+app.listen(${svc.port}, () => {
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
+});
+
+export default app;
+`;
+}
+
+function genGithub(svc: IRService, _ir: IR): string {
+  const config = svc.config as GithubConfig;
+  return `${header(svc)}
+import express from 'express';
+import { Octokit } from '@octokit/rest';
+import { log } from '../shared/logger';
+
+const app = express();
+app.use(express.json());
+
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
+});
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', service: '${svc.slug}', repo: '${config.repo}' });
+});
+
+// Webhook endpoint
+app.post('/webhook', (req, res) => {
+  log('${svc.slug}', 'Received GitHub webhook');
+  res.json({ received: true });
+});
+
+app.post('/process', async (req, res) => {
+  log('${svc.slug}', 'Processing GitHub interaction');
+  res.json({ message: 'GitHub Integration Service' });
+});
+
+app.listen(${svc.port}, () => {
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
+});
+
+export default app;
+`;
+}
+
+function genFunction(svc: IRService, _ir: IR): string {
+  const config = svc.config as FunctionConfig;
+  // This is similar to Custom Logic but with more specific "Serverless Function" semantics
+  return `${header(svc)}
+import express from 'express';
+import cors from 'cors';
+import { log } from '../shared/logger';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', service: '${svc.slug}', language: '${config.language}' });
+});
+
+app.all('*', async (req, res) => {
+    if (req.path === '/health') return;
+
+    log('${svc.slug}', \`Executing \${req.method} \${req.path}\`);
+    try {
+        const context = {
+            log: (msg: string) => log('${svc.slug}', msg),
+        };
+
+        const input = req.body;
+        
+        // Execute user code
+        // wrapped in an async function
+        const fn = new Function('input', 'context', \`
+            return (async () => {
+                ${config.code || '// No code provided'}
+            })();
+        \`);
+        
+        const result = await fn(input, context);
+        res.json(result);
+
+    } catch (err: any) {
+        log('${svc.slug}', 'Function execution failed', err);
+        res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, data: req.body });
-  } catch (err) {
-    log('${svc.slug}', 'Storage error', err);
-    res.status(500).json({ error: 'Storage operation failed' });
-  }
 });
 
 app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Object Storage service listening on port ${svc.port}');
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
 });
 
 export default app;
 `;
 }
 
-function genQueue(svc: IRService, _ir: IR): string {
-  const config = svc.config as QueueConfig;
+function genGenericService(svc: IRService, _ir: IR): string {
   return `${header(svc)}
 import express from 'express';
-import { Queue } from 'bullmq';
-import Redis from 'ioredis';
+import cors from 'cors';
 import { log } from '../shared/logger';
 
 const app = express();
-app.use(express.json());
-
-const connection = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null,
-});
-
-const queue = new Queue('${svc.slug}', { connection });
-
-app.get('/health', async (_req, res) => {
-  const counts = await queue.getJobCounts();
-  res.json({ status: 'healthy', service: '${svc.slug}', ...counts });
-});
-
-// Enqueue a job
-app.post('/process', async (req, res) => {
-  log('${svc.slug}', 'Enqueuing job');
-  try {
-    const job = await queue.add('process', req.body, {
-      removeOnComplete: true,
-      removeOnFail: 100,
-    });
-    res.json({ success: true, jobId: job.id });
-  } catch (err) {
-    log('${svc.slug}', 'Enqueue error', err);
-    res.status(500).json({ error: 'Failed to enqueue job' });
-  }
-});
-
-// Max queue size: ${config.maxSize}, drop policy: ${config.dropPolicy}
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Queue service listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
-function genWorker(svc: IRService, ir: IR): string {
-  const config = svc.config as WorkerConfig;
-  // Find upstream queue
-  const upstreamQueue = ir.services.find(
-    (s) => svc.upstreamIds.includes(s.id) && (s.nodeType === 'QUEUE'),
-  );
-  const queueName = upstreamQueue?.slug || svc.slug;
-
-  return `${header(svc)}
-import { Worker, Job } from 'bullmq';
-import Redis from 'ioredis';
-import { log } from '../shared/logger';
-
-const connection = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null,
-});
-
-// Worker with ${config.concurrency} concurrent processors
-const worker = new Worker(
-  '${queueName}',
-  async (job: Job) => {
-    log('${svc.slug}', \`Processing job \${job.id}\`, job.data);
-
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, ${config.baseLatency}));
-
-    ${svc.downstreamIds.length > 0 ? `// Forward result to downstream
-    ${svc.downstreamIds.map((dsId) => {
-      const ds = ir.services.find((s) => s.id === dsId);
-      return ds ? `await fetch('http://localhost:${ds.port}/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job.data),
-    });` : '';
-    }).join('\n    ')}` : `// No downstream — job complete`}
-
-    return { processed: true, jobId: job.id };
-  },
-  {
-    connection,
-    concurrency: ${config.concurrency},
-  },
-);
-
-worker.on('completed', (job) => {
-  log('${svc.slug}', \`Job \${job.id} completed\`);
-});
-
-worker.on('failed', (job, err) => {
-  log('${svc.slug}', \`Job \${job?.id} failed\`, err);
-});
-
-log('${svc.slug}', 'Worker started with concurrency ${config.concurrency}');
-`;
-}
-
-function genStreamProcessor(svc: IRService, _ir: IR): string {
-  const config = svc.config as StreamProcessorConfig;
-  return `${header(svc)}
-import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
-import { log } from '../shared/logger';
-
-const kafka = new Kafka({
-  clientId: '${svc.slug}',
-  brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
-});
-
-const consumer: Consumer = kafka.consumer({ groupId: '${config.consumerGroup}' });
-
-async function start() {
-  await consumer.connect();
-  await consumer.subscribe({ topic: '${svc.slug}-topic', fromBeginning: false });
-
-  await consumer.run({
-    partitionsConsumedConcurrently: ${config.partitions},
-    eachMessage: async ({ topic, partition, message }: EachMessagePayload) => {
-      const value = message.value?.toString();
-      log('${svc.slug}', \`Partition \${partition}: \${value?.slice(0, 100)}\`);
-
-      // Process message here
-      // ...
-    },
-  });
-
-  log('${svc.slug}', 'Stream Processor started (${config.partitions} partitions)');
-}
-
-start().catch((err) => {
-  log('${svc.slug}', 'Failed to start stream processor', err);
-  process.exit(1);
-});
-`;
-}
-
-function genBatchProcessor(svc: IRService, _ir: IR): string {
-  const config = svc.config as BatchProcessorConfig;
-  return `${header(svc)}
-import express from 'express';
-import cron from 'node-cron';
-import { log } from '../shared/logger';
-
-const app = express();
-app.use(express.json());
-
-// In-memory buffer for batch accumulation
-const buffer: unknown[] = [];
-const BATCH_SIZE = ${config.batchSize};
-
-// Schedule batch processing every ${config.scheduleIntervalMs / 1000}s
-cron.schedule('*/${Math.max(1, Math.floor(config.scheduleIntervalMs / 1000))} * * * * *', async () => {
-  if (buffer.length === 0) return;
-
-  const batch = buffer.splice(0, BATCH_SIZE);
-  log('${svc.slug}', \`Processing batch of \${batch.length} items\`);
-
-  // Process the batch
-  // ...
-
-  log('${svc.slug}', \`Batch complete. \${buffer.length} items remaining\`);
-});
-
-app.post('/process', (req, res) => {
-  buffer.push(req.body);
-  res.json({ queued: true, bufferSize: buffer.length });
-});
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}', bufferSize: buffer.length });
-});
-
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Batch Processor listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
-function genAnalyticsSink(svc: IRService, _ir: IR): string {
-  const config = svc.config as AnalyticsSinkConfig;
-  return `${header(svc)}
-import express from 'express';
-import { log } from '../shared/logger';
-
-const app = express();
-app.use(express.json());
-
-const eventBuffer: unknown[] = [];
-const FLUSH_INTERVAL = ${config.flushIntervalMs};
-const MAX_BUFFER = ${config.bufferSize};
-
-// Periodic flush
-setInterval(() => {
-  if (eventBuffer.length === 0) return;
-  const batch = eventBuffer.splice(0, MAX_BUFFER);
-  log('${svc.slug}', \`Flushing \${batch.length} analytics events\`);
-  // In production, send to data warehouse / analytics platform
-}, FLUSH_INTERVAL);
-
-app.post('/process', (req, res) => {
-  eventBuffer.push({ ...req.body, timestamp: Date.now() });
-  if (eventBuffer.length >= MAX_BUFFER) {
-    const batch = eventBuffer.splice(0, MAX_BUFFER);
-    log('${svc.slug}', \`Buffer full — flushing \${batch.length} events\`);
-  }
-  res.json({ received: true, bufferSize: eventBuffer.length });
-});
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', service: '${svc.slug}', bufferSize: eventBuffer.length });
-});
-
-app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Analytics Sink listening on port ${svc.port}');
-});
-
-export default app;
-`;
-}
-
-function genCustomLogic(svc: IRService, ir: IR): string {
-  return `${header(svc)}
-import express from 'express';
-import { log } from '../shared/logger';
-
-const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'healthy', service: '${svc.slug}' });
 });
 
-app.post('/process', async (req, res) => {
-  log('${svc.slug}', 'Processing custom logic');
-  try {
-    // =========================================================================
-    // Custom logic — modify this section
-    // =========================================================================
-    const result = { processed: true, input: req.body };
-
-    ${svc.downstreamIds.length > 0 ? `// Forward to downstream
-    ${svc.downstreamIds.map((dsId) => {
-      const ds = ir.services.find((s) => s.id === dsId);
-      return ds ? `await fetch('http://localhost:${ds.port}/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(result),
-    });` : '';
-    }).join('\n    ')}` : ''}
-
-    res.json({ success: true, data: result });
-  } catch (err) {
-    log('${svc.slug}', 'Custom logic error', err);
-    res.status(500).json({ error: 'Processing failed' });
-  }
+app.all('*', (req, res) => {
+  log('${svc.slug}', \`Received \${req.method} \${req.path}\`);
+  res.json({ message: 'Service operational', nodeType: '${svc.nodeType}' });
 });
 
 app.listen(${svc.port}, () => {
-  log('${svc.slug}', 'Custom Logic service listening on port ${svc.port}');
+  log('${svc.slug}', '${svc.name} listening on port ${svc.port}');
 });
 
 export default app;
 `;
 }
 
-function genGenericService(svc: IRService, ir: IR): string {
-  return genRestApi(svc, ir);
-}
-
-// -----------------------------------------------------------------------------
-// Entry Point Generator
-// -----------------------------------------------------------------------------
-
 function generateEntryPoint(ir: IR): GeneratedFile {
   const lines: string[] = [
     '// =============================================================================',
-    `// ${ir.projectName} — Entry Point (generated by Atlas)`,
-    '// =============================================================================',
-    `// This file starts all ${ir.services.length} services.`,
-    '// In production, each service would run in its own process/container.',
+    `// ${ir.projectName} — Main Orchestrator`,
     '// =============================================================================',
     '',
-    "import { log } from './shared/logger';",
+    `console.log('Starting ${ir.projectName} backend...');`,
     '',
+    `// In a real microservices deployment, each service would be a separate container/process.`,
+    `// For this local dev setup, we are running them as independent processes via nodemon,`,
+    `// or you could spawn them here.`,
+    '',
+    `// See package.json scripts or docker-compose.yml`,
   ];
-
-  // Import each service
-  for (const svc of ir.services) {
-    // Workers and stream processors don't use express, import differently
-    if (['WORKER', 'STREAM_PROCESSOR'].includes(svc.nodeType)) {
-      lines.push(`import './services/${svc.slug}';`);
-    } else {
-      lines.push(`import './services/${svc.slug}';`);
-    }
-  }
-
-  lines.push('');
-  lines.push("log('main', '=== Atlas Backend Started ===');");
-  lines.push(`log('main', 'Services: ${ir.services.length}');`);
-
-  for (const svc of ir.services) {
-    lines.push(`log('main', '  ${svc.name} → http://localhost:${svc.port}');`);
-  }
 
   return {
     path: 'src/index.ts',
@@ -1420,130 +846,55 @@ function generateEntryPoint(ir: IR): GeneratedFile {
   };
 }
 
-// -----------------------------------------------------------------------------
-// Docker Compose
-// -----------------------------------------------------------------------------
-
 function generateDockerCompose(ir: IR): GeneratedFile {
-  const lines: string[] = [
-    '# =============================================================================',
-    `# ${ir.projectName} — Docker Compose (generated by Atlas)`,
-    '# =============================================================================',
-    '',
-    'version: "3.8"',
-    '',
-    'services:',
-  ];
+  let content = `version: '3.8'
+services:
+`;
 
-  // Check if Redis is needed
-  const needsRedis = ir.services.some((s) =>
-    ['REDIS_CACHE', 'QUEUE', 'WORKER'].includes(s.nodeType),
-  );
-
-  // Check if Postgres is needed
-  const needsPostgres = ir.services.some((s) =>
-    ['SQL_DATABASE', 'DATABASE'].includes(s.nodeType),
-  );
-
-  // Check if MongoDB is needed
-  const needsMongo = ir.services.some((s) => s.nodeType === 'NOSQL_DATABASE');
-
-  if (needsRedis) {
-    lines.push(
-      '  redis:',
-      '    image: redis:7-alpine',
-      '    ports:',
-      '      - "6379:6379"',
-      '',
-    );
-  }
-
-  if (needsPostgres) {
-    lines.push(
-      '  postgres:',
-      '    image: postgres:16-alpine',
-      '    environment:',
-      '      POSTGRES_USER: postgres',
-      '      POSTGRES_PASSWORD: postgres',
-      '      POSTGRES_DB: atlas',
-      '    ports:',
-      '      - "5432:5432"',
-      '',
-    );
-  }
-
-  if (needsMongo) {
-    lines.push(
-      '  mongo:',
-      '    image: mongo:7',
-      '    ports:',
-      '      - "27017:27017"',
-      '',
-    );
+  for (const svc of ir.services) {
+    content += `  ${svc.slug}:
+    build: .
+    command: npx ts-node src/services/${svc.slug}.ts
+    ports:
+      - "${svc.port}:${svc.port}"
+    environment:
+      - PORT=${svc.port}
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+`;
   }
 
   return {
     path: 'docker-compose.yml',
-    content: lines.join('\n'),
+    content,
     language: 'yaml',
   };
 }
 
-// -----------------------------------------------------------------------------
-// README
-// -----------------------------------------------------------------------------
-
 function generateReadme(ir: IR): GeneratedFile {
-  const lines: string[] = [
-    `# ${ir.projectName}`,
-    '',
-    '> Generated by **Atlas** — Visual Backend Architecture Platform',
-    '',
-    '## Services',
-    '',
-    '| Service | Type | Port |',
-    '|---------|------|------|',
-  ];
-
-  for (const svc of ir.services) {
-    lines.push(`| ${svc.name} | ${svc.nodeType} | ${svc.port} |`);
-  }
-
-  lines.push(
-    '',
-    '## Quick Start',
-    '',
-    '```bash',
-    'npm install',
-    'npm run dev',
-    '```',
-    '',
-    '## Architecture',
-    '',
-  );
-
-  // ASCII-art-style architecture description
-  for (const conn of ir.connections) {
-    const src = ir.services.find((s) => s.id === conn.sourceId);
-    const tgt = ir.services.find((s) => s.id === conn.targetId);
-    if (src && tgt) {
-      lines.push(`- **${src.name}** → (${conn.protocol}) → **${tgt.name}**`);
-    }
-  }
-
-  lines.push(
-    '',
-    '## Development',
-    '',
-    'Each service runs on its own port. In production, deploy as separate containers.',
-    '',
-    '---',
-    '*Generated by Atlas*',
-  );
-
   return {
     path: 'README.md',
-    content: lines.join('\n'),
+    content: `# ${ir.projectName}
+
+Generated by Atlas.
+
+## Services
+
+${ir.services.map(s => `- **${s.name}** (${s.nodeType}) running on port ${s.port}`).join('\n')}
+
+## Getting Started
+
+1. Install dependencies:
+   \`\`\`bash
+   npm install
+   \`\`\`
+
+2. Run in development mode:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+`,
     language: 'markdown',
   };
 }

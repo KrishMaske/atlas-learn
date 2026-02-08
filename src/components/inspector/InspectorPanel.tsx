@@ -3,26 +3,17 @@
 import { useGraphStore } from '@/core/graph/graphStore';
 import {
   NodeType,
-  ClientConfig,
-  ApiConfig,
-  DatabaseConfig,
-  CacheConfig,
-  QueueConfig,
-  WorkerConfig,
-  LoadBalancerConfig,
-  ApiGatewayConfig,
-  RateLimiterConfig,
+  ContextConfig,
   RestApiConfig,
   GraphqlApiConfig,
-  AuthServiceConfig,
   RedisCacheConfig,
   SqlDatabaseConfig,
   NosqlDatabaseConfig,
   ObjectStorageConfig,
-  StreamProcessorConfig,
-  BatchProcessorConfig,
-  AnalyticsSinkConfig,
-  CustomLogicConfig,
+  SupabaseConfig,
+  FirebaseConfig,
+  GithubConfig,
+  FunctionConfig,
   NODE_VISUALS,
 } from '@/core/types';
 
@@ -148,51 +139,17 @@ function TextInput({
 
 // --------------- Config forms per node type ---------------
 
-function ClientForm({ config, onChange }: { config: ClientConfig; onChange: (c: Partial<ClientConfig>) => void }) {
+function ContextForm({ config, onChange }: { config: ContextConfig; onChange: (c: Partial<ContextConfig>) => void }) {
   return (
-    <>
-      <Slider label="Requests/sec" value={config.rps} min={10} max={2000} step={10} unit=" RPS" onChange={(v) => onChange({ rps: v })} />
-      <Slider label="Burst Multiplier" value={config.burstMultiplier} min={1} max={10} step={0.5} unit="x" onChange={(v) => onChange({ burstMultiplier: v })} />
-    </>
-  );
-}
-
-function LoadBalancerForm({ config, onChange }: { config: LoadBalancerConfig; onChange: (c: Partial<LoadBalancerConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={100} max={5000} step={100} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={1} max={50} step={1} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <SelectField label="Algorithm" value={config.algorithm} options={[
-        { value: 'ROUND_ROBIN', label: 'Round Robin' },
-        { value: 'LEAST_CONNECTIONS', label: 'Least Connections' },
-        { value: 'RANDOM', label: 'Random' },
-        { value: 'IP_HASH', label: 'IP Hash' },
-      ]} onChange={(v) => onChange({ algorithm: v })} />
-      <Slider label="Health Check" value={config.healthCheckIntervalMs} min={1000} max={30000} step={1000} unit="ms" onChange={(v) => onChange({ healthCheckIntervalMs: v })} />
-    </>
-  );
-}
-
-function ApiGatewayForm({ config, onChange }: { config: ApiGatewayConfig; onChange: (c: Partial<ApiGatewayConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={50} max={2000} step={50} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={1} max={50} step={1} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Toggle label="Auth Enabled" value={config.authEnabled} onChange={(v) => onChange({ authEnabled: v })} />
-      <Toggle label="Rate Limiting" value={config.rateLimitEnabled} onChange={(v) => onChange({ rateLimitEnabled: v })} />
-      <Toggle label="CORS" value={config.corsEnabled} onChange={(v) => onChange({ corsEnabled: v })} />
-      <Slider label="Error Rate" value={config.errorRate * 100} min={0} max={10} step={0.5} unit="%" onChange={(v) => onChange({ errorRate: v / 100 })} />
-    </>
-  );
-}
-
-function RateLimiterForm({ config, onChange }: { config: RateLimiterConfig; onChange: (c: Partial<RateLimiterConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Max Requests" value={config.maxRequests} min={10} max={1000} step={10} onChange={(v) => onChange({ maxRequests: v })} />
-      <Slider label="Window" value={config.windowMs / 1000} min={1} max={300} step={1} unit="s" onChange={(v) => onChange({ windowMs: v * 1000 })} />
-      <Slider label="Capacity" value={config.capacity} min={100} max={5000} step={100} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-    </>
+    <div className="mb-3">
+      <label className="text-muted-foreground text-sm block mb-1">System Context / Prompt</label>
+      <textarea
+        value={config.context}
+        onChange={(e) => onChange({ context: e.target.value })}
+        className="w-full bg-secondary text-foreground rounded-lg px-3 py-2 text-xs font-mono border border-border h-32 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+        placeholder="Describe the high-level purpose of this system..."
+      />
+    </div>
   );
 }
 
@@ -226,39 +183,7 @@ function GraphqlApiForm({ config, onChange }: { config: GraphqlApiConfig; onChan
   );
 }
 
-function AuthServiceForm({ config, onChange }: { config: AuthServiceConfig; onChange: (c: Partial<AuthServiceConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={50} max={1000} step={50} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={5} max={100} step={1} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Token TTL" value={config.tokenTTL} min={60} max={86400} step={60} unit="s" onChange={(v) => onChange({ tokenTTL: v })} />
-      <SelectField label="Algorithm" value={config.algorithm} options={[
-        { value: 'JWT', label: 'JWT' },
-        { value: 'OAuth2', label: 'OAuth 2.0' },
-      ]} onChange={(v) => onChange({ algorithm: v })} />
-    </>
-  );
-}
 
-function ApiForm({ config, onChange }: { config: ApiConfig; onChange: (c: Partial<ApiConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={50} max={500} step={10} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={1} max={100} step={1} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Error Rate" value={config.errorRate * 100} min={0} max={10} step={0.5} unit="%" onChange={(v) => onChange({ errorRate: v / 100 })} />
-    </>
-  );
-}
-
-function CacheForm({ config, onChange }: { config: CacheConfig; onChange: (c: Partial<CacheConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={100} max={2000} step={50} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Hit Rate" value={config.hitRate * 100} min={0} max={100} step={5} unit="%" onChange={(v) => onChange({ hitRate: v / 100 })} />
-      <Slider label="TTL" value={config.ttl} min={30} max={3600} step={30} unit="s" onChange={(v) => onChange({ ttl: v })} />
-    </>
-  );
-}
 
 function RedisCacheForm({ config, onChange }: { config: RedisCacheConfig; onChange: (c: Partial<RedisCacheConfig>) => void }) {
   return (
@@ -278,15 +203,7 @@ function RedisCacheForm({ config, onChange }: { config: RedisCacheConfig; onChan
   );
 }
 
-function DatabaseForm({ config, onChange }: { config: DatabaseConfig; onChange: (c: Partial<DatabaseConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={20} max={500} step={10} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={10} max={200} step={5} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Max Connections" value={config.maxConnections} min={10} max={200} step={5} onChange={(v) => onChange({ maxConnections: v })} />
-    </>
-  );
-}
+
 
 function SqlDatabaseForm({ config, onChange }: { config: SqlDatabaseConfig; onChange: (c: Partial<SqlDatabaseConfig>) => void }) {
   return (
@@ -331,73 +248,82 @@ function ObjectStorageForm({ config, onChange }: { config: ObjectStorageConfig; 
   );
 }
 
-function QueueForm({ config, onChange }: { config: QueueConfig; onChange: (c: Partial<QueueConfig>) => void }) {
+function SupabaseForm({ config, onChange }: { config: SupabaseConfig; onChange: (c: Partial<SupabaseConfig>) => void }) {
+  const toggleFeature = (f: 'AUTH' | 'DB' | 'STORAGE' | 'EDGE') => {
+    const features = config.features.includes(f)
+      ? config.features.filter((x) => x !== f)
+      : [...config.features, f];
+    onChange({ features });
+  };
   return (
     <>
-      <Slider label="Max Size" value={config.maxSize} min={100} max={10000} step={100} onChange={(v) => onChange({ maxSize: v })} />
-      <SelectField label="Drop Policy" value={config.dropPolicy} options={[
-        { value: 'REJECT_NEW', label: 'Reject New' },
-        { value: 'DROP_OLDEST', label: 'Drop Oldest' },
-      ]} onChange={(v) => onChange({ dropPolicy: v })} />
+      <div className="mb-4 space-y-2">
+        <label className="text-muted-foreground text-sm block mb-1">Features</label>
+        {['AUTH', 'DB', 'STORAGE', 'EDGE'].map((f) => (
+          <Toggle
+            key={f}
+            label={f}
+            value={config.features.includes(f as any)}
+            onChange={() => toggleFeature(f as any)}
+          />
+        ))}
+      </div>
+      <TextInput label="Project URL" value={config.url || ''} onChange={(v) => onChange({ url: v })} />
+      <TextInput label="Anon Key" value={config.key || ''} onChange={(v) => onChange({ key: v })} />
     </>
   );
 }
 
-function WorkerForm({ config, onChange }: { config: WorkerConfig; onChange: (c: Partial<WorkerConfig>) => void }) {
+function FirebaseForm({ config, onChange }: { config: FirebaseConfig; onChange: (c: Partial<FirebaseConfig>) => void }) {
+  const toggleFeature = (f: 'AUTH' | 'FIRESTORE' | 'STORAGE' | 'FUNCTIONS') => {
+    const features = config.features.includes(f)
+      ? config.features.filter((x) => x !== f)
+      : [...config.features, f];
+    onChange({ features });
+  };
   return (
     <>
-      <Slider label="Capacity" value={config.capacity} min={10} max={500} step={10} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Processing Time" value={config.baseLatency} min={10} max={2000} step={10} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Concurrency" value={config.concurrency} min={1} max={32} step={1} onChange={(v) => onChange({ concurrency: v })} />
+      <div className="mb-4 space-y-2">
+        <label className="text-muted-foreground text-sm block mb-1">Features</label>
+        {['AUTH', 'FIRESTORE', 'STORAGE', 'FUNCTIONS'].map((f) => (
+          <Toggle
+            key={f}
+            label={f}
+            value={config.features.includes(f as any)}
+            onChange={() => toggleFeature(f as any)}
+          />
+        ))}
+      </div>
+      <TextInput label="Project ID" value={(config as any).projectId || ''} onChange={(v) => onChange({ projectId: v } as any)} />
+      <TextInput label="API Key" value={(config as any).apiKey || ''} onChange={(v) => onChange({ apiKey: v } as any)} />
     </>
   );
 }
 
-function StreamProcessorForm({ config, onChange }: { config: StreamProcessorConfig; onChange: (c: Partial<StreamProcessorConfig>) => void }) {
+function GithubForm({ config, onChange }: { config: GithubConfig; onChange: (c: Partial<GithubConfig>) => void }) {
   return (
     <>
-      <Slider label="Capacity" value={config.capacity} min={100} max={5000} step={100} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={1} max={50} step={1} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Partitions" value={config.partitions} min={1} max={32} step={1} onChange={(v) => onChange({ partitions: v })} />
-      <TextInput label="Consumer Group" value={config.consumerGroup} onChange={(v) => onChange({ consumerGroup: v })} />
+      <TextInput label="Repository" value={config.repo} onChange={(v) => onChange({ repo: v })} />
+      <TextInput label="Branch" value={config.branch} onChange={(v) => onChange({ branch: v })} />
+      <Toggle label="Enable Actions" value={config.actions} onChange={(v) => onChange({ actions: v })} />
     </>
   );
 }
 
-function BatchProcessorForm({ config, onChange }: { config: BatchProcessorConfig; onChange: (c: Partial<BatchProcessorConfig>) => void }) {
+function FunctionForm({ config, onChange }: { config: FunctionConfig; onChange: (c: Partial<FunctionConfig>) => void }) {
   return (
     <>
-      <Slider label="Capacity" value={config.capacity} min={10} max={500} step={10} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Processing Time" value={config.baseLatency} min={50} max={5000} step={50} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Batch Size" value={config.batchSize} min={10} max={500} step={10} onChange={(v) => onChange({ batchSize: v })} />
-      <Slider label="Schedule Interval" value={config.scheduleIntervalMs / 1000} min={1} max={300} step={1} unit="s" onChange={(v) => onChange({ scheduleIntervalMs: v * 1000 })} />
-    </>
-  );
-}
-
-function AnalyticsSinkForm({ config, onChange }: { config: AnalyticsSinkConfig; onChange: (c: Partial<AnalyticsSinkConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={100} max={5000} step={100} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={1} max={50} step={1} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Flush Interval" value={config.flushIntervalMs / 1000} min={1} max={60} step={1} unit="s" onChange={(v) => onChange({ flushIntervalMs: v * 1000 })} />
-      <Slider label="Buffer Size" value={config.bufferSize} min={50} max={5000} step={50} onChange={(v) => onChange({ bufferSize: v })} />
-    </>
-  );
-}
-
-function CustomLogicForm({ config, onChange }: { config: CustomLogicConfig; onChange: (c: Partial<CustomLogicConfig>) => void }) {
-  return (
-    <>
-      <Slider label="Capacity" value={config.capacity} min={10} max={500} step={10} unit=" RPS" onChange={(v) => onChange({ capacity: v })} />
-      <Slider label="Base Latency" value={config.baseLatency} min={1} max={500} step={5} unit="ms" onChange={(v) => onChange({ baseLatency: v })} />
-      <Slider label="Error Rate" value={config.errorRate * 100} min={0} max={20} step={0.5} unit="%" onChange={(v) => onChange({ errorRate: v / 100 })} />
+      <SelectField label="Language" value={config.language} options={[
+        { value: 'typescript', label: 'TypeScript' },
+        { value: 'python', label: 'Python' },
+        { value: 'go', label: 'Go' },
+      ]} onChange={(v) => onChange({ language: v })} />
       <div className="mb-3">
-        <label className="text-slate-400 text-sm block mb-1">Logic Description</label>
+        <label className="text-muted-foreground text-sm block mb-1">Code</label>
         <textarea
           value={config.code}
           onChange={(e) => onChange({ code: e.target.value })}
-          className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-xs font-mono border border-slate-600 h-20 resize-none"
+          className="w-full bg-secondary text-foreground rounded-lg px-3 py-2 text-xs font-mono border border-border h-40 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
     </>
@@ -430,26 +356,17 @@ export default function InspectorPanel() {
     const t = selectedNode.type as NodeType;
     const c = selectedNode.config;
     switch (t) {
-      case 'CLIENT': return <ClientForm config={c as ClientConfig} onChange={handleChange} />;
-      case 'LOAD_BALANCER': return <LoadBalancerForm config={c as LoadBalancerConfig} onChange={handleChange} />;
-      case 'API_GATEWAY': return <ApiGatewayForm config={c as ApiGatewayConfig} onChange={handleChange} />;
-      case 'RATE_LIMITER': return <RateLimiterForm config={c as RateLimiterConfig} onChange={handleChange} />;
+      case 'CONTEXT': return <ContextForm config={c as ContextConfig} onChange={handleChange} />;
       case 'REST_API': return <RestApiForm config={c as RestApiConfig} onChange={handleChange} />;
       case 'GRAPHQL_API': return <GraphqlApiForm config={c as GraphqlApiConfig} onChange={handleChange} />;
-      case 'AUTH_SERVICE': return <AuthServiceForm config={c as AuthServiceConfig} onChange={handleChange} />;
-      case 'API': return <ApiForm config={c as ApiConfig} onChange={handleChange} />;
-      case 'CACHE': return <CacheForm config={c as CacheConfig} onChange={handleChange} />;
       case 'REDIS_CACHE': return <RedisCacheForm config={c as RedisCacheConfig} onChange={handleChange} />;
-      case 'DATABASE': return <DatabaseForm config={c as DatabaseConfig} onChange={handleChange} />;
       case 'SQL_DATABASE': return <SqlDatabaseForm config={c as SqlDatabaseConfig} onChange={handleChange} />;
       case 'NOSQL_DATABASE': return <NosqlDatabaseForm config={c as NosqlDatabaseConfig} onChange={handleChange} />;
       case 'OBJECT_STORAGE': return <ObjectStorageForm config={c as ObjectStorageConfig} onChange={handleChange} />;
-      case 'QUEUE': return <QueueForm config={c as QueueConfig} onChange={handleChange} />;
-      case 'WORKER': return <WorkerForm config={c as WorkerConfig} onChange={handleChange} />;
-      case 'STREAM_PROCESSOR': return <StreamProcessorForm config={c as StreamProcessorConfig} onChange={handleChange} />;
-      case 'BATCH_PROCESSOR': return <BatchProcessorForm config={c as BatchProcessorConfig} onChange={handleChange} />;
-      case 'ANALYTICS_SINK': return <AnalyticsSinkForm config={c as AnalyticsSinkConfig} onChange={handleChange} />;
-      case 'CUSTOM_LOGIC': return <CustomLogicForm config={c as CustomLogicConfig} onChange={handleChange} />;
+      case 'SUPABASE': return <SupabaseForm config={c as SupabaseConfig} onChange={handleChange} />;
+      case 'FIREBASE': return <FirebaseForm config={c as FirebaseConfig} onChange={handleChange} />;
+      case 'GITHUB': return <GithubForm config={c as GithubConfig} onChange={handleChange} />;
+      case 'FUNCTION': return <FunctionForm config={c as FunctionConfig} onChange={handleChange} />;
       default: return null;
     }
   };
@@ -470,7 +387,7 @@ export default function InspectorPanel() {
       </div>
 
       {/* Job Spec / Description */}
-      {!['CLIENT', 'CUSTOM_LOGIC'].includes(selectedNode.type) && (
+      {!['CONTEXT'].includes(selectedNode.type) && (
         <div className="mb-4">
           <label className="text-muted-foreground text-sm block mb-1">Job Description</label>
           <textarea
@@ -479,44 +396,6 @@ export default function InspectorPanel() {
             placeholder="Describe what this node does..."
             className="w-full bg-secondary text-foreground rounded-lg px-3 py-2 text-xs font-mono border border-border h-16 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
           />
-          <button
-            onClick={async () => {
-              const description = (selectedNode.config as any).jobSpec;
-              if (!description) {
-                alert('Please add a description first');
-                return;
-              }
-              const btn = document.activeElement as HTMLButtonElement;
-              if (btn) btn.disabled = true;
-              try {
-                const res = await fetch('/api/v1/ai/generate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    nodeId: selectedNode.id,
-                    nodeType: selectedNode.type,
-                    nodeLabel: selectedNode.label,
-                    description,
-                    currentCode: (selectedNode.config as any).customCode,
-                  }),
-                });
-                const data = await res.json();
-                if (data.success && data.code) {
-                  handleChange({ customCode: data.code });
-                  alert('✅ Code generated! Switch to Code view to see it.');
-                } else {
-                  alert('Failed to generate: ' + (data.error || 'Unknown error'));
-                }
-              } catch (err: any) {
-                alert('Error: ' + err.message);
-              } finally {
-                if (btn) btn.disabled = false;
-              }
-            }}
-            className="mt-2 w-full py-1.5 bg-gradient-to-r from-primary to-purple-600 text-primary-foreground rounded-lg hover:opacity-90 transition-opacity text-xs font-medium flex items-center justify-center gap-1"
-          >
-            ✨ Generate Code
-          </button>
         </div>
       )}
 

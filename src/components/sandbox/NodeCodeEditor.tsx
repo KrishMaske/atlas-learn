@@ -46,7 +46,13 @@ export default function NodeCodeEditor() {
   };
 
   const handleEditorChange = (value: string | undefined) => {
-    updateNodeConfig(selectedNode.id, { customCode: value || '' });
+    // If it's a FUNCTION node, update 'code'. Otherwise try 'customCode' or fallback.
+    // Ideally we should check the node type or config shape.
+    if ((selectedNode.config as any).code !== undefined || selectedNode.type === 'FUNCTION') {
+        updateNodeConfig(selectedNode.id, { code: value || '' });
+    } else {
+        updateNodeConfig(selectedNode.id, { customCode: value || '' });
+    }
   };
 
   // Default execution template
@@ -83,21 +89,21 @@ return { ...input, processed: true };
         </div>
       </div>
       
-      {/* Description / Job Spec Prompt */}
-      {selectedNode.config.jobSpec && (
-          <div className="px-4 py-2 bg-blue-900/10 border-b border-blue-900/30">
-              <p className="text-xs text-blue-300 font-medium mb-1">Job Description:</p>
-              <p className="text-xs text-slate-400 italic">{selectedNode.config.jobSpec}</p>
-          </div>
-      )}
-
-      <div className="flex-1 overflow-hidden relative flex flex-col">
-        <div className="flex-1 min-h-[200px]">
-            <Editor
-            height="100%"
-            defaultLanguage="javascript"
-            theme="vs-dark"
-            value={selectedNode.config.customCode || defaultCode}
+       /* Description / Job Spec Prompt */
+       {(selectedNode.config as any).jobSpec && (
+           <div className="px-4 py-2 bg-blue-900/10 border-b border-blue-900/30">
+               <p className="text-xs text-blue-300 font-medium mb-1">Job Description:</p>
+               <p className="text-xs text-slate-400 italic">{(selectedNode.config as any).jobSpec}</p>
+           </div>
+       )}
+ 
+       <div className="flex-1 overflow-hidden relative flex flex-col">
+         <div className="flex-1 min-h-[200px]">
+             <Editor
+             height="100%"
+             defaultLanguage="javascript"
+             theme="vs-dark"
+             value={(selectedNode.config as any).code || (selectedNode.config as any).customCode || defaultCode}
             onChange={handleEditorChange}
             options={{
                 minimap: { enabled: false },

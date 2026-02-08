@@ -67,14 +67,7 @@ export default function Hero() {
                         </span>
                     </Link>
 
-                    <Link
-                        href="/tutorial"
-                        className="group px-8 py-3.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-300"
-                    >
-                        <span className="flex items-center gap-2">
-                            <Play className="w-4 h-4 fill-current" /> Start Tutorial
-                        </span>
-                    </Link>
+
                 </div>
             </div>
 

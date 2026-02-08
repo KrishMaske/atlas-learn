@@ -90,7 +90,7 @@ export function compileGraphToIR(
 
   // Build services
   const services: IRService[] = nodes
-    .filter((n) => n.type !== 'CLIENT') // Clients are traffic sources, not backend services
+    .filter((n) => n.type !== 'CONTEXT') // Context nodes are for AI, not backend runtime
     .map((node) => {
       const def = getNodeDefinition(node.type);
       return {
@@ -108,7 +108,11 @@ export function compileGraphToIR(
 
   // Build connections
   const connections: IRConnection[] = edges
-    .filter((e) => nodes.find((n) => n.id === e.sourceId)?.type !== 'CLIENT')
+    .filter((e) => {
+      const src = nodes.find((n) => n.id === e.sourceId);
+      const tgt = nodes.find((n) => n.id === e.targetId);
+      return src?.type !== 'CONTEXT' && tgt?.type !== 'CONTEXT';
+    })
     .map((edge) => {
       const sourceNode = nodes.find((n) => n.id === edge.sourceId);
       return {
@@ -117,18 +121,6 @@ export function compileGraphToIR(
         protocol: inferProtocol(sourceNode, nodes.find((n) => n.id === edge.targetId)),
       };
     });
-
-  // Also add connections from CLIENT → first downstream as HTTP connections
-  for (const edge of edges) {
-    const src = nodes.find((n) => n.id === edge.sourceId);
-    if (src?.type === 'CLIENT') {
-      connections.push({
-        sourceId: edge.sourceId,
-        targetId: edge.targetId,
-        protocol: 'http',
-      });
-    }
-  }
 
   // Collect all packages
   const pkgSet = new Set<string>();
@@ -169,14 +161,9 @@ function inferProtocol(
 ): IRConnection['protocol'] {
   if (!source || !target) return 'http';
 
-  const queueTypes: NodeType[] = ['QUEUE'];
-  const streamTypes: NodeType[] = ['STREAM_PROCESSOR', 'BATCH_PROCESSOR'];
+  // Placeholder for future protocol inference
+  // if (source.type === 'SOME_QUEUE_TYPE') return 'queue';
 
-  if (queueTypes.includes(source.type) || queueTypes.includes(target.type)) {
-    return 'queue';
-  }
-  if (streamTypes.includes(source.type) || streamTypes.includes(target.type)) {
-    return 'stream';
-  }
+  return 'http';
   return 'http';
 }

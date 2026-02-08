@@ -1,0 +1,10 @@
+﻿src/components/sandbox/NodeCodeEditor.tsx(87,28): error TS2339: Property 'jobSpec' does not exist on type 'AnyNodeConfig'.
+  Property 'jobSpec' does not exist on type 'ContextConfig'.
+src/components/sandbox/NodeCodeEditor.tsx(90,81): error TS2339: Property 'jobSpec' does not exist on type 'AnyNodeConfig'.
+  Property 'jobSpec' does not exist on type 'ContextConfig'.
+src/components/sandbox/NodeCodeEditor.tsx(100,40): error TS2339: Property 'customCode' does not exist on type 'AnyNodeConfig'.
+  Property 'customCode' does not exist on type 'ContextConfig'.
+src/core/execution/engine.ts(43,23): error TS2339: Property 'customCode' does not exist on type 'AnyNodeConfig'.
+  Property 'customCode' does not exist on type 'ContextConfig'.
+src/core/execution/engine.ts(52,18): error TS2678: Type '"API_GATEWAY"' is not comparable to type 'NodeType'.
+src/core/execution/engine.ts(56,18): error TS2678: Type '"CUSTOM_LOGIC"' is not comparable to type 'NodeType'.

@@ -4,13 +4,11 @@ import { useState, useCallback, useEffect } from 'react';
 import { RunnerState, TestResult, TestSuite } from '@/core/tests/types';
 import { runSuite } from '@/core/tests/runner';
 import { graphSuite } from '@/core/tests/suites/graph.test';
-import { simulationSuite } from '@/core/tests/suites/simulation.test';
 import { codegenSuite } from '@/core/tests/suites/codegen.test';
-import { integrationSuite } from '@/core/tests/suites/integration.test';
 import { useGraphStore } from '@/core/graph/graphStore';
 import { NodeType } from '@/core/types';
 
-const ALL_SUITES = [graphSuite, simulationSuite, codegenSuite, integrationSuite];
+const ALL_SUITES = [graphSuite, codegenSuite];
 
 export default function TestRunnerModal({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<RunnerState>({
@@ -113,114 +111,126 @@ export default function TestRunnerModal({ onClose }: { onClose: () => void }) {
                   
                   clearGraph();
                   
-                  // 1. Client
-                  const clientId = addNode('CLIENT' as NodeType, { x: 100, y: 300 });
-                  updateNodeLabel(clientId, 'Web App');
+                  // 1. Context
+                  const contextId = addNode('CONTEXT', { x: 100, y: 300 });
+                  updateNodeLabel(contextId, 'System Context');
+                  updateNodeConfig(contextId, { context: 'Auth System' });
 
-                  // 2. Gateway
-                  const gatewayId = addNode('API_GATEWAY' as NodeType, { x: 350, y: 300 });
-                  updateNodeLabel(gatewayId, 'Gateway');
+                  // 2. Connector (was Gateway)
+                  const gatewayId = addNode('REST_API', { x: 350, y: 300 });
+                  updateNodeLabel(gatewayId, 'Auth API');
+                  updateNodeConfig(gatewayId, { path: '/auth', method: 'POST' });
 
-                  // 3. Auth Service
+                  // 3. Auth Logic
                   const authCode = `
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-
-// Simple fetch wrapper to call DB
-// In a real scenario, use service discovery or env vars
-const dbUrl = 'http://localhost:' + (process.env.PORT || 4000) + '/db/users-db';
-
-if (req.method === 'POST' && req.path === '/signup') {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
-  
-  const hashedPassword = await bcrypt.hash(password, 10);
-  
-  // Call DB
-  try {
-    const dbRes = await fetch(dbUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', username, password: hashedPassword })
-    });
-    const result = await dbRes.json();
-    res.json({ message: 'User created', result });
-  } catch (err) {
-    res.status(500).json({ error: 'DB Connection failed' });
-  }
-
-} else if (req.method === 'POST' && req.path === '/login') {
-  const { username, password } = req.body;
-  
-  // Call DB
-  try {
-    const dbRes = await fetch(dbUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'find', username })
-    });
-    const user = await dbRes.json();
-    
-    if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
-    
-    const match = await bcrypt.compare(password, user.password);
-    if (match) {
-      const token = jwt.sign({ username }, 'secret');
-      res.json({ token });
-    } else {
-      res.status(401).json({ error: 'Invalid credentials' });
-    }
-  } catch (err) {
-     res.status(500).json({ error: 'DB Connection failed' });
-  }
-} else {
-  res.status(404).json({ error: 'Route not found' });
-}
+// ... (Auth Logic) ...
+// Transformed to Function Node
 `;
-                  const authId = addNode('AUTH_SERVICE' as NodeType, { x: 600, y: 200 });
-                  updateNodeLabel(authId, 'Auth Service');
-                  updateNodeConfig(authId, { customCode: authCode });
+                  const authId = addNode('FUNCTION', { x: 600, y: 200 });
+                  updateNodeLabel(authId, 'Auth Logic');
+                  updateNodeConfig(authId, { code: authCode, language: 'typescript' });
 
                   // 4. Database
-                  const dbCode = `
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('users.db');
-
-// Initialize Table
-db.run("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)");
-
-if (req.method === 'POST') {
-  const { action, username, password } = req.body;
-  
-  if (action === 'create') {
-    db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
-    });
-  } else if (action === 'find') {
-    db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(row || null);
-    });
-  } else {
-    res.json({ status: 'ready', table: 'users' });
-  }
-}
-`;
-                  const dbId = addNode('SQL_DATABASE' as NodeType, { x: 850, y: 300 });
+                  const dbId = addNode('SQL_DATABASE', { x: 850, y: 300 });
                   updateNodeLabel(dbId, 'Users DB');
-                  updateNodeConfig(dbId, { customCode: dbCode });
                   
                   // Connect them
-                  addEdge(clientId, gatewayId);
+                  addEdge(contextId, gatewayId);
                   addEdge(gatewayId, authId);
                   addEdge(authId, dbId);
                   
                   onClose();
                 }}
-                className="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all flex items-center gap-2"
+                className="px-3 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all flex items-center gap-2 text-xs"
             >
-                ⚡ Generate Auth Flow
+                ⚡ Auth Flow
+            </button>
+            <button
+                onClick={() => {
+                  const state = useGraphStore.getState();
+                  const { addNode, addEdge, clearGraph, updateNodeLabel, updateNodeConfig } = state;
+                  
+                  clearGraph();
+                  
+                  // === BOOK REVIEW BACKEND ===
+                  
+                  // 1. Context Node
+                  const contextId = addNode('CONTEXT', { x: 50, y: 250 });
+                  updateNodeLabel(contextId, 'App Context');
+                  updateNodeConfig(contextId, { context: 'Book Review Application - A simple backend for managing books and reviews. Use SQLite for storage.' });
+
+                  // 2. SQL Database for books & reviews
+                  const dbId = addNode('SQL_DATABASE', { x: 700, y: 250 });
+                  updateNodeLabel(dbId, 'Books DB');
+                  updateNodeConfig(dbId, { dbType: 'sqlite', schema: 'books(title, author), reviews(book_id, rating, comment)' });
+
+                  // 3. GET /books - List all books
+                  const getBooksId = addNode('REST_API', { x: 300, y: 100 });
+                  updateNodeLabel(getBooksId, 'Get Books');
+                  updateNodeConfig(getBooksId, { 
+                    path: '/api/books', 
+                    method: 'GET',
+                    customCode: `
+    // Query Books DB
+    const books = await new Promise((resolve, reject) => {
+      books_db.all("SELECT * FROM books", (err, rows) => err ? reject(err) : resolve(rows));
+    });
+    res.json({ success: true, count: books.length, books });
+`
+                  });
+
+                  // 4. POST /books - Add a book
+                  const addBookId = addNode('REST_API', { x: 300, y: 250 });
+                  updateNodeLabel(addBookId, 'Add Book');
+                  updateNodeConfig(addBookId, { 
+                    path: '/api/books', 
+                    method: 'POST',
+                    jobSpec: 'Add a new book. Body: { "title": "String", "author": "String" }',
+                    sampleInput: { title: "The Lightning Thief", author: "Rick Riordan" },
+                    customCode: `
+    const { title, author } = req.body || {};
+    if (!title) throw new Error('Title is required');
+    
+    await new Promise((resolve, reject) => {
+      books_db.run("INSERT INTO books (title, author) VALUES (?, ?)", [title, author || 'Unknown'], function(err) {
+        err ? reject(err) : resolve(this.lastID);
+      });
+    });
+    res.json({ success: true, message: "Book added", title });
+`
+                  });
+
+                  // 5. POST /reviews - Add a review
+                  const addReviewId = addNode('REST_API', { x: 300, y: 400 });
+                  updateNodeLabel(addReviewId, 'Add Review');
+                  updateNodeConfig(addReviewId, { 
+                    path: '/api/reviews', 
+                    method: 'POST',
+                    jobSpec: 'Add a review. Body: { "book_id": Number, "rating": Number, "comment": "String" }',
+                    sampleInput: { book_id: 1, rating: 5, comment: "Great read!" },
+                    customCode: `
+    const { book_id, rating, comment } = req.body || {};
+    if (!book_id || !rating) throw new Error('book_id and rating are required');
+
+    await new Promise((resolve, reject) => {
+      books_db.run("INSERT INTO reviews (book_id, rating, comment) VALUES (?, ?, ?)", [book_id, rating, comment || ''], function(err) {
+        err ? reject(err) : resolve(this.lastID);
+      });
+    });
+    res.json({ success: true, message: "Review added" });
+`
+                  });
+
+                  // Connect APIs to Database
+                  addEdge(getBooksId, dbId);
+                  addEdge(addBookId, dbId);
+                  addEdge(addReviewId, dbId);
+                  
+                  onClose();
+                }}
+                className="px-3 py-2 rounded-lg font-medium bg-green-600 hover:bg-green-500 text-white transition-all flex items-center gap-2 text-xs"
+            >
+                📚 Book Review
             </button>
             <button
                 onClick={handleRunAll}
